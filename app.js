@@ -165,11 +165,6 @@ function draw3D(){if(!T)return;const n=S.cars.length;while(T.cars.length<n){cons
  T.ang+=.003;const R=700;T.cam.position.set(S.cam.x+Math.cos(T.ang)*R,520,S.cam.y+Math.sin(T.ang)*R);T.cam.lookAt(S.cam.x,0,S.cam.y);T.r.render(T.sc,T.cam)}
 $('v3').onclick=()=>{const on=$('c3d').classList.toggle('hidden')===false;if(on)init3D();cv.style.visibility=on?'hidden':'visible'};
 // ===== Цикл
-let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;if(S.run)step(dt);
- if(!$('c3d').classList.contains('hidden'))draw3D();else draw();requestAnimationFrame(loop)})(last);
- 
-
-
-
-
-
+let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;try{if(S.run)step(dt);
+ if(!$('c3d').classList.contains('hidden'))draw3D();else draw()}catch(e){console.error(e);S.run=false;const d=$('hint');d.style.background='#7f1d1d';d.textContent='Помилка: '+e.message}
+ requestAnimationFrame(loop)})(last);
