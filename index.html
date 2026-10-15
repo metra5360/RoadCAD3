@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RoadCAD Lanes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="style.css"></head>
+<body class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
+<canvas id="c2d"></canvas><div id="c3d" class="hidden"></div>
+<div id="hint" class="absolute top-2 left-2 text-xs bg-gray-800/80 rounded px-2 py-1">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · Alt+клік — аварія · ПКМ+тягнути — панорама · колесо — масштаб</div>
+<div id="bar" class="absolute bottom-0 inset-x-0 bg-gray-800/95 border-t border-gray-700 p-2 flex flex-wrap gap-2 items-center justify-center">
+  <div id="presets" class="flex gap-1"></div>
+  <select id="mode" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="line">Пряма</option><option value="spline">Крива</option></select>
+  <select id="level" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="0">Земля</option><option value="1">Міст</option><option value="-1">Тунель</option></select>
+  <label class="text-sm"><input type="checkbox" id="par"> Паралельно</label>
+  <button id="sim" class="btn">▶ Трафік</button><button id="v3" class="btn">3D</button><button id="clr" class="btn">Очистити</button>
+</div>
+<script src="app.js"></script></body></html>
