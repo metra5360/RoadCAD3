@@ -165,3 +165,4 @@ $('v3').onclick=()=>{const on=$('c3d').classList.toggle('hidden')===false;if(on)
 // ===== Цикл
 let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;if(S.run)step(dt);
  if(!$('c3d').classList.contains('hidden'))draw3D();else draw();requestAnimationFrame(loop)})(last);
+ 
