@@ -3,7 +3,7 @@
 <title>RoadCAD Lanes</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>addEventListener('error',e=>{let d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99;background:#7f1d1d;color:#fff;padding:8px;font:12px monospace;white-space:pre-wrap';document.body.appendChild(d)}d.textContent+=(e.message||'Помилка завантаження: '+(e.target&&(e.target.src||e.target.href)))+(e.lineno?' (рядок '+e.lineno+')':'')+'\n'});</script>
+<script>addEventListener('error',e=>{let d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99;background:#7f1d1d;color:#fff;padding:8px;font:12px monospace;white-space:pre-wrap';document.body.appendChild(d)}d.textContent+=(e.message||'НЕ ЗАВАНТАЖИВСЯ ФАЙЛ: '+(e.target&&(e.target.src||e.target.href))+' — покладіть його поруч з index.html')+(e.lineno?' (рядок '+e.lineno+')':'')+'\n'},true);</script>
 <link rel="stylesheet" href="style.css"></head>
 <body style="background:#111827;color:#f3f4f6" class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
 <canvas id="c2d"></canvas><div id="c3d" class="hidden"></div>
@@ -23,12 +23,4 @@
   </span>
   <button id="sim" class="btn">▶ Трафік</button><button id="v3" class="btn">3D</button><button id="clr" class="btn">Очистити</button>
 </div>
-<script src="js/catalog.js"></script>
-<script src="js/core.js"></script>
-<script src="js/network.js"></script>
-<script src="js/sim.js"></script>
-<script src="js/render2d.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/ramps.js"></script>
-<script src="js/render3d.js"></script>
-<script src="js/main.js"></script></body></html>
+<script src="app.js"></script></body></html>
