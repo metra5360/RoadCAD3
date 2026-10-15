@@ -1,3 +1,4 @@
+
 'use strict';
 // ===== Пресети: f/b — смуги вперед/назад, lw — ширина смуги, v — макс.швидкість, med — розділювач
 const CATS=[],PRESETS={};
@@ -65,10 +66,10 @@ function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==und
     const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,next:[b],nb:[]});conns.push(l);a.next.push(l);b.hasIn=true}}}
  const link=(a,b)=>{const p0=a.pts[a.pts.length-1],p1=b.pts[0],Q=[];for(let k=0;k<=6;k++){const t=k/6;Q.push({x:p0.x+(p1.x-p0.x)*t,y:p0.y+(p1.y-p0.y)*t})}
   const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,next:[b],nb:[]});conns.push(l);a.next.push(l);b.hasIn=true};
- S.roads.forEach((r,ri)=>{if(r.ramp!=='exit'&&r.ramp!=='entry')return;const rl=S.lanes.find(l=>l.road===ri&&!l.conn);if(!rl)return;const ex=r.ramp==='exit',q=ex?rl.pts[0]:rl.pts[rl.pts.length-1];let best=null,bd=40;
+ S.roads.forEach((r,ri)=>{if(r.ramp!=='exit'&&r.ramp!=='entry')return;const rl=S.lanes.find(l=>l.road===ri&&!l.conn);if(!rl)return;const ex=r.ramp==='exit',q=ex?rl.pts[0]:rl.pts[rl.pts.length-1];let best=null,bd=220;
   for(const o of S.lanes){if(o.conn||o.road===ri||S.roads[o.road].level!==r.level)continue;const e=ex?o.pts[o.pts.length-1]:o.pts[0],d=dist(e,q);
    const dh=Math.abs(wrap((ex?at(o,o.len).a:at(o,0).a)-(ex?at(rl,0).a:at(rl,rl.len).a)));if(d<bd&&dh<1.6){bd=d;best=o}}
-  if(best)ex?link(best,rl):link(rl,best)});
+  r.linked=!!best;if(best)ex?link(best,rl):link(rl,best)});
  S.lanes.push(...conns);
  for(const a of S.lanes)for(const b of S.lanes)if(a!==b&&!a.conn&&!b.conn&&a.road===b.road&&a.dir===b.dir&&Math.abs(a.idx-b.idx)===1)a.nb.push(b)}
 // ===== Симуляція (IDM + перестроювання)
@@ -159,19 +160,21 @@ function lvlRamp(p){let best=null,bd=1e9;for(const r of S.roads){const pr=PRESET
  if(!best)return null;const r=best.r,P=r.pts,e0=dist(p,P[0])<dist(p,P[P.length-1])?0:1,E=e0?P[P.length-1]:P[0];if(dist(p,E)>220)return null;
  const Q=e0?P[P.length-2]:P[1],h=Math.atan2(E.y-Q.y,E.x-Q.x),L=+$('rlen').value,sel=+$('level').value,to=sel!==r.level?sel:(r.level===0?1:0),pts=[];
  for(let k=0;k<=8;k++)pts.push({x:E.x+Math.cos(h)*L*k/8,y:E.y+Math.sin(h)*L*k/8});return{lv:1,r,pts,to,pk:r.pk}}
-function rampAt(p){if(+$('rang').value===0)return lvlRamp(p);let best=null,bd=1e9;const lv=+$('level').value;
- for(const r of S.roads){if(r.level!==lv)continue;const pr=PRESETS[r.pk];if(pr.f+pr.b===0)continue;const n=nearestOn(r.pts,p);if(n.d<bd&&n.d<roadW(pr)/2+30){bd=n.d;best={r,n}}}
- if(!best)return null;const{r,n}=best,pr=PRESETS[r.pk],a=r.pts[n.i],b=r.pts[n.i+1],h0=Math.atan2(b.y-a.y,b.x-a.x),right=$('rside').value==='r';
- if(right?!pr.f:!pr.b)return null;
+function rampAt(p){if(+$('rang').value===0)return lvlRamp(p);let best=null,bd=1e9;
+ for(const r of S.roads){if(r.ramp==='level')continue;const pr=PRESETS[r.pk];if(pr.f+pr.b===0)continue;const n=nearestOn(r.pts,p);if(n.d<bd&&n.d<roadW(pr)/2+30){bd=n.d;best={r,n}}}
+ if(!best)return null;let right=$('rside').value==='r';const{r,n}=best,pr=PRESETS[r.pk],a=r.pts[n.i],b=r.pts[n.i+1],h0=Math.atan2(b.y-a.y,b.x-a.x);
+ if(right?!pr.f:!pr.b)right=!right;if(right?!pr.f:!pr.b)return null;
  const h=right?h0:h0+Math.PI,off=right?laneOff(pr,0,pr.f-1):laneOff(pr,1,pr.b-1),att={x:n.x-Math.sin(h0)*off,y:n.y+Math.cos(h0)*off};
  const th=$('rang').value*Math.PI/180,d=(+$('rlen').value)/2,exit=$('rkind').value==='exit';let P0,C,P2;
  if(exit){P0=att;C={x:att.x+Math.cos(h)*d,y:att.y+Math.sin(h)*d};P2={x:C.x+Math.cos(h+th)*d,y:C.y+Math.sin(h+th)*d}}
  else{C={x:att.x-Math.cos(h)*d,y:att.y-Math.sin(h)*d};P0={x:C.x-Math.cos(h-th)*d,y:C.y-Math.sin(h-th)*d};P2=att}
  const pts=[];for(let k=0;k<=16;k++){const t=k/16,u=1-t;pts.push({x:u*u*P0.x+2*u*t*C.x+t*t*P2.x,y:u*u*P0.y+2*u*t*C.y+t*t*P2.y})}
  return{r,n,pts,exit}}
-function placeRamp(p){const g=rampAt(p);if(!g)return;if(g.lv){S.roads.push({pts:g.pts,pk:g.pk,level:g.to,ramp:'level',from:g.r.level,attEnd:0,ys:[g.r.level*30,g.to*30]});buildGraph();return}const cur=PRESETS[S.preset],nm=g.exit?"З'їзд з магістралі":"В'їзд на магістраль";
+const HINT0=$('hint').textContent;let hintT=0;
+function toast(t){const d=$('hint');d.textContent=t;clearTimeout(hintT);hintT=setTimeout(()=>{d.textContent=HINT0;d.style.background=''},3500)}
+function placeRamp(p){const g=rampAt(p);if(!g){toast('Наведіть курсор на дорогу зі смугами (з\'їзд ставиться біля неї; 0° — біля кінця дороги)');return}if(g.lv){S.roads.push({pts:g.pts,pk:g.pk,level:g.to,ramp:'level',from:g.r.level,attEnd:0,ys:[g.r.level*30,g.to*30]});buildGraph();return}const cur=PRESETS[S.preset],nm=g.exit?"З'їзд з магістралі":"В'їзд на магістраль";
  const pk=cur.f>0&&cur.b===0?S.preset:Object.keys(PRESETS).find(k=>PRESETS[k].n===nm);
- splitRoad(g.r,[g.n]);S.roads.push({pts:g.pts,pk,level:g.r.level,ramp:g.exit?'exit':'entry'});buildGraph()}
+ splitRoad(g.r,[g.n]);S.roads.push({pts:g.pts,pk,level:g.r.level,ramp:g.exit?'exit':'entry'});buildGraph();if(!S.roads[S.roads.length-1].linked)toast('Рампу поставлено, але вона не з\'єднана зі смугою. Спробуйте інше місце, далі від перехрестя.')}
 $('ramp').onclick=()=>{S.rampMode=!S.rampMode;$('rampbox').classList.toggle('hidden',!S.rampMode);$('ramp').classList.toggle('ring-2',S.rampMode);S.pts=[]};
 $('rang').oninput=()=>{const v=+$('rang').value;$('rangv').textContent=v+'°';$('rhint').textContent=v===0?'0° = пряма рампа міст↔земля (від кінця дороги)':''};
 // ===== 3D (Three.js): стрічки доріг + бокси авто
