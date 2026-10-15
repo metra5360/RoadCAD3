@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RoadCAD Lanes</title>
-<script src="app.js?v=2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>addEventListener('error',e=>{let d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99;background:#7f1d1d;color:#fff;padding:8px;font:12px monospace;white-space:pre-wrap';document.body.appendChild(d)}d.textContent+=(e.message||'Помилка завантаження: '+(e.target&&(e.target.src||e.target.href)))+(e.lineno?' (рядок '+e.lineno+')':'')+'\n'});</script>
 <link rel="stylesheet" href="style.css"></head>
-<body class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
+<body style="background:#111827;color:#f3f4f6" class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
 <canvas id="c2d"></canvas><div id="c3d" class="hidden"></div>
 <div id="hint" class="absolute top-2 left-2 text-xs bg-gray-800/80 rounded px-2 py-1">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · Alt+клік — аварія · ПКМ+тягнути — панорама · колесо — масштаб</div>
 <div id="bar" class="absolute bottom-0 inset-x-0 bg-gray-800/95 border-t border-gray-700 p-2 flex flex-wrap gap-2 items-center justify-center">
