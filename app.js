@@ -1,15 +1,17 @@
+
 'use strict';
 // ===== Пресети: f/b — смуги вперед/назад, lw — ширина смуги, v — макс.швидкість, med — розділювач
 const CATS=[],PRESETS={};
 const B={f:1,b:1,lw:30,v:1.8,col:'#3b3f46',med:0,sw:0,paved:1};
 function C(cat,L){CATS.push(cat);for(const[n,o]of L)PRESETS['p'+Object.keys(PRESETS).length]={n,cat,...B,...o}}
 const M={f:2,b:2,v:2.2},L6={f:3,b:3,v:2.6},H={col:'#2f3237',v:3.2,barrier:1},BR={f:2,b:2,v:2.2,lv:1,sw:6};
-C('🏘️ Малі',[['Двосмугова двостороння',{}],['Двосмугова одностороння',{f:2,b:0}],['Вузька житлова',{lw:24}],['Житлова з тротуарами',{sw:10}],['Житлова з деревами',{sw:12,tree:1}],['Житлова з паркуванням',{sw:10,park:1}],['Житлова з узбіччям',{sw:8,swc:'#9a8b6a'}],['Ґрунтова',{lw:26,v:1.1,col:'#7a5c3a',paved:0}],['Гравійна',{lw:26,v:1.4,col:'#9a9486',paved:0}],['Тупик (cul-de-sac)',{cul:1,sw:8}],['Під паркування',{park:1}],['Мала на мосту',{lv:1,sw:6}],['Мала з трамваєм',{med:18,tram:1}]]);
+C('🏘️ Малі',[['Двосмугова двостороння',{}],['Двосмугова одностороння',{f:2,b:0}],['Односмугова одностороння',{f:1,b:0}],['Односмугова вузька',{f:1,b:0,lw:24}],['Односмугова з тротуарами',{f:1,b:0,sw:10}],['Вузька житлова',{lw:24}],['Житлова з тротуарами',{sw:10}],['Житлова з деревами',{sw:12,tree:1}],['Житлова з паркуванням',{sw:10,park:1}],['Житлова з узбіччям',{sw:8,swc:'#9a8b6a'}],['Ґрунтова',{lw:26,v:1.1,col:'#7a5c3a',paved:0}],['Гравійна',{lw:26,v:1.4,col:'#9a9486',paved:0}],['Тупик (cul-de-sac)',{cul:1,sw:8}],['Під паркування',{park:1}],['Мала на мосту',{lv:1,sw:6}],['Мала з трамваєм',{med:18,tram:1}]]);
 C('🏙️ Середні',[['4 смуги двостороння',M],['4 смуги одностороння',{...M,f:4,b:0}],['4 смуги з розділювачем',{...M,med:14}],['4 смуги з деревами',{...M,sw:12,tree:1}],['З велосмугами',{...M,bike:1,sw:6}],['З автобусними смугами',{...M,bus:1,sw:6}],['З трамвайними коліями',{...M,med:20,tram:1}],['Автобусні + трамвай',{...M,bus:1,med:20,tram:1}],['Широкі тротуари',{...M,sw:26}],['З паркувальними смугами',{...M,park:1,sw:8}],['Центральна зелена смуга',{...M,med:18,green:1}],['Середня на мосту',{...M,lv:1,sw:6}],['Два рівні проїзної частини',{...M,lv:1,br:'cover',sw:6}]]);
 C('🌆 Великі',[['6 смуг двостороння',L6],['6 смуг одностороння',{...L6,f:6,b:0}],['6 смуг з розділювачем',{...L6,med:14}],['6 смуг з деревами',{...L6,sw:12,tree:1}],['З велосмугами',{...L6,bike:1,sw:6}],['З автобусними смугами',{...L6,bus:1,sw:6}],['З трамвайними коліями',{...L6,med:20,tram:1}],['Проспект з широкими тротуарами',{...L6,sw:30,tree:1}],['Центральна зелена смуга',{...L6,med:22,green:1}],['Велика на мосту',{...L6,lv:1,sw:6}]]);
 C('🚘 Автомагістралі',[['2 смуги одностороння',{...H,f:2,b:0}],['3 смуги одностороння',{...H,f:3,b:0}],['4 смуги двостороння',{...H,f:2,b:2,med:10}],['6 смуг двостороння',{...H,f:3,b:3,med:10}],['З центральним розділювачем',{...H,f:3,b:3,med:24,green:1}],['З шумовими бар\'єрами',{...H,f:2,b:2,med:10,noise:1}],['Розділені проїзні частини',{...H,f:2,b:2,med:60,green:1}],['Дворівнева',{...H,f:2,b:2,med:10,lv:1,br:'cover'}],['Естакадна',{...H,f:2,b:2,med:10,lv:1}],['Підземна',{...H,f:2,b:2,med:10,lv:-1}],['В\'їзд на магістраль',{...H,f:1,b:0,v:2.4}],['З\'їзд з магістралі',{...H,f:1,b:0,v:2.4}],['Ділянка розв\'язки',{...H,f:2,b:0,v:2.6}]]);
 C('🌉 Мости й тунелі',[['Автомобільний міст',BR],['Арковий',{...BR,br:'arch'}],['Підвісний',{...BR,br:'susp'}],['Вантовий',{...BR,br:'cable'}],['Розвідний',{...BR,br:'bascule'}],['Підіймальний',{...BR,br:'lift'}],['Дворівневий',{...BR,br:'cover',f:3,b:3}],['З трамваєм',{...BR,f:1,b:1,med:18,tram:1}],['Автотунель',{...BR,lv:-1,sw:0}],['Підземний проїзд',{...BR,lv:-1,f:1,b:1,sw:0}],['Естакада',{...BR,sw:0}],['Дворівнева споруда',{...BR,br:'cover',med:10}]]);
 const carW=p=>Math.max((p.f+p.b)*p.lw+p.med,p.w||0),sideW=p=>(p.bus?p.lw:0)+(p.bike?12:0)+(p.park?16:0)+p.sw,roadW=p=>carW(p)+2*sideW(p);
+const laneW=p=>(p.f+p.b)*p.lw+p.med,laneOff=(p,rev,i)=>rev?-laneW(p)/2+p.b*p.lw-(i+.5)*p.lw:-laneW(p)/2+p.b*p.lw+p.med+(i+.5)*p.lw;
 const BRC={susp:'#dc2626',cable:'#f59e0b',arch:'#6b7280',bascule:'#7c3aed',lift:'#0ea5e9',rail:'#78350f'};
 const S={roads:[],lanes:[],cars:[],pts:[],preset:'p0',run:false,cam:{x:0,y:0,z:1},mouse:{x:0,y:0},obst:[]};
 const cv=document.getElementById('c2d'),ctx=cv.getContext('2d');
@@ -52,7 +54,7 @@ function buildGraph(){S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t
  for(const n of S.nodes){n.mw=Math.max(...n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])));n.T=n.m.length>2?n.mw*.5+10:4;n.m.forEach(q=>S.roads[q.r]['t'+q.e]=n.T)}
  S.roads.forEach((r,ri)=>{const pr=PRESETS[r.pk],m=pr.med/2;r.tp=trimPoly(r.pts,r.t0,r.t1);
   const mk=(d,rev,idx)=>{const Q=offsetLine(r.tp,d);if(rev)Q.reverse();const l=mkLane(Q);Object.assign(l,{road:ri,dir:rev?-1:1,idx,nl:rev?pr.b:pr.f,next:[],nb:[]});S.lanes.push(l)};
-  for(let i=0;i<pr.f;i++)mk(m+(i+.5)*pr.lw,0,i);for(let i=0;i<pr.b;i++)mk(-(m+(i+.5)*pr.lw),1,i)});
+  for(let i=0;i<pr.f;i++)mk(laneOff(pr,0,i),0,i);for(let i=0;i<pr.b;i++)mk(laneOff(pr,1,i),1,i)});
  const conns=[],wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
  for(const n of S.nodes){const R=n.mw/2+40;
   for(const a of S.lanes){if(S.roads[a.road].level!==n.lv||dist(a.pts[a.pts.length-1],n.c)>R)continue;
@@ -86,7 +88,7 @@ function step(dt){if(Math.random()<.04&&S.cars.length<(S.lanes.length*6))spawn()
    if(slow||needTurn){for(const nb of c.lane.nb){const s2=c.s*nb.len/c.lane.len;
      const f=leader(c,nb,s2),back=S.cars.some(o=>o.lane===nb&&o.s<s2&&s2-o.s<34&&o.v>c.v*.9&&o!==c);
      if(f.gap>L.gap+20&&f.gap>35&&!back){c.want=nb;break}}}}
-  if(c.want){const nb=c.want,tgt=(nb.idx-c.lane.idx)*PRESETS[S.roads[c.lane.road].pk].lw*(nb.dir);
+  if(c.want){const nb=c.want,tgt=-(nb.idx-c.lane.idx)*PRESETS[S.roads[c.lane.road].pk].lw;
    c.lat+=(Math.sign(tgt)||0)*dt*40*(c.v>.1?1:0);
    if(Math.abs(c.lat)>=Math.abs(tgt)-.5){c.s=c.s*nb.len/c.lane.len;c.lane=nb;c.lat=0;c.want=null;c.route=null}}
   c.s+=c.v*dt*60;
@@ -98,14 +100,14 @@ function step(dt){if(Math.random()<.04&&S.cars.length<(S.lanes.length*6))spawn()
 function strokePath(P,w,col,dash){ctx.beginPath();P.forEach((p,i)=>{const q=w2s(p);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});
  ctx.lineWidth=w*S.cam.z;ctx.strokeStyle=col;ctx.setLineDash(dash||[]);ctx.lineCap='butt';ctx.lineJoin='round';ctx.stroke();ctx.setLineDash([])}
 const strokeOff=(P,d,w,col,dash)=>strokePath(offsetLine(P,d),w,col,dash);
-function deco(r,p){const P=r.tp,E=carW(p)/2,m=p.med/2;let o=E;
+function deco(r,p){const P=r.tp,E=carW(p)/2,mc=-laneW(p)/2+p.b*p.lw+p.med/2;let o=E;
  if(p.bus){[1,-1].forEach(s=>strokeOff(P,s*(o+p.lw/2),p.lw,'#b91c1c'));o+=p.lw}
  if(p.bike){[1,-1].forEach(s=>strokeOff(P,s*(o+6),10,'#16a34a'));o+=12}
  if(p.park){[1,-1].forEach(s=>{strokeOff(P,s*(o+8),14,'#4b5563');strokeOff(P,s*(o+8),14,'#e5e7eb',[2,16])});o+=16}
  if(p.tree)[1,-1].forEach(s=>strokeOff(P,s*(o+p.sw/2),8,'#15803d',[6,24]));
- if(p.med){strokePath(P,p.med,p.green?'#3f7f3f':p.tram?'#555':'#6b7280');if(p.tram)[-4,4].forEach(d=>strokeOff(P,d,1.5,'#d1d5db'));if(p.barrier)[1,-1].forEach(s=>strokeOff(P,s*(m+1),3,'#e5e7eb'))}
+ if(p.med){strokeOff(P,mc,p.med,p.green?'#3f7f3f':p.tram?'#555':'#6b7280');if(p.tram)[-4,4].forEach(d=>strokeOff(P,mc+d,1.5,'#d1d5db'));if(p.barrier)[1,-1].forEach(s=>strokeOff(P,mc+s*(p.med/2+1),3,'#e5e7eb'))}
  if(p.noise)[1,-1].forEach(s=>strokeOff(P,s*(E+3),4,'#38bdf8'));
- if(p.paved){for(let i=1;i<p.f;i++)strokeOff(P,m+i*p.lw,2,'#e5e7eb',[14,14]);for(let i=1;i<p.b;i++)strokeOff(P,-(m+i*p.lw),2,'#e5e7eb',[14,14]);if(p.b&&p.f&&!p.med)strokePath(P,2,'#facc15')}}
+ if(p.paved){const L0=-laneW(p)/2+p.b*p.lw;for(let i=1;i<p.f;i++)strokeOff(P,L0+p.med+i*p.lw,2,'#e5e7eb',[14,14]);for(let i=1;i<p.b;i++)strokeOff(P,L0-i*p.lw,2,'#e5e7eb',[14,14]);if(p.b&&p.f&&!p.med)strokeOff(P,L0,2,'#facc15')}}
 function draw(){ctx.fillStyle='#14532d';ctx.fillRect(0,0,cv.width,cv.height);
  for(const lv of [-1,0,1]){const R=S.roads.filter(r=>r.level===lv);ctx.globalAlpha=lv<0?.45:1;
   for(const r of R){const p=PRESETS[r.pk];if(lv>0){strokePath(r.pts,roadW(p)+22,'rgba(0,0,0,.35)');strokePath(r.pts,roadW(p)+8,BRC[p.br]||'#9ca3af')}if(sideW(p))strokePath(r.pts,roadW(p),p.swc||'#b8b8b0')}
