@@ -1,4 +1,3 @@
-
 'use strict';
 // ===== Пресети: f/b — смуги вперед/назад, lw — ширина смуги, v — макс.швидкість, med — розділювач
 const CATS=[],PRESETS={};
@@ -201,3 +200,9 @@ $('v3').onclick=()=>{const on=$('c3d').classList.toggle('hidden')===false;if(on)
 let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;try{if(S.run)step(dt);
  if(!$('c3d').classList.contains('hidden'))draw3D();else draw()}catch(e){console.error(e);S.run=false;const d=$('hint');d.style.background='#7f1d1d';d.textContent='Помилка: '+e.message}
  requestAnimationFrame(loop)})(last);
+ 
+
+
+
+
+
