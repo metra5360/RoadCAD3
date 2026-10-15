@@ -47,7 +47,7 @@ function addRoad(pts,pk,lv,sp){let c=sp?catmull(pts):pts.map(p=>({...p}));
  for(const p of cutPoly(c,cuts))S.roads.push({pts:p,pk,level:lv});buildGraph()}
 function buildGraph(){S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t1=0);
  const eps=[];S.roads.forEach((r,i)=>[0,1].forEach(e=>eps.push({r:i,e,p:e?r.pts[r.pts.length-1]:r.pts[0]})));
- const nodes=[];for(const q of eps){let n=nodes.find(n=>dist(n.c,q.p)<14);if(!n)nodes.push(n={c:{x:q.p.x,y:q.p.y},m:[]});n.m.push(q)}
+ const nodes=[];for(const q of eps){const lvq=S.roads[q.r].level;let n=nodes.find(n=>n.lv===lvq&&dist(n.c,q.p)<14);if(!n)nodes.push(n={lv:lvq,c:{x:q.p.x,y:q.p.y},m:[]});n.m.push(q)}
  S.nodes=nodes.filter(n=>n.m.length>1);
  for(const n of S.nodes){n.mw=Math.max(...n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])));n.T=n.m.length>2?n.mw*.5+10:4;n.m.forEach(q=>S.roads[q.r]['t'+q.e]=n.T)}
  S.roads.forEach((r,ri)=>{const pr=PRESETS[r.pk],m=pr.med/2;r.tp=trimPoly(r.pts,r.t0,r.t1);
@@ -55,8 +55,8 @@ function buildGraph(){S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t
   for(let i=0;i<pr.f;i++)mk(m+(i+.5)*pr.lw,0,i);for(let i=0;i<pr.b;i++)mk(-(m+(i+.5)*pr.lw),1,i)});
  const conns=[],wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
  for(const n of S.nodes){const R=n.mw/2+40;
-  for(const a of S.lanes){if(dist(a.pts[a.pts.length-1],n.c)>R)continue;
-   for(const b of S.lanes){if(b.road===a.road||dist(b.pts[0],n.c)>R)continue;
+  for(const a of S.lanes){if(S.roads[a.road].level!==n.lv||dist(a.pts[a.pts.length-1],n.c)>R)continue;
+   for(const b of S.lanes){if(b.road===a.road||S.roads[b.road].level!==n.lv||dist(b.pts[0],n.c)>R)continue;
     const turn=wrap(at(b,0).a-at(a,a.len).a),ab=Math.abs(turn);if(ab>2.1)continue;
     const ok=ab<.5?b.idx===Math.min(a.idx,b.nl-1):turn>0?(a.idx===a.nl-1&&b.idx===b.nl-1):(a.idx===0&&b.idx===0);if(!ok)continue;
     const p0=a.pts[a.pts.length-1],p1=b.pts[0],ct=ab<.5?{x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2}:n.c,Q=[];
@@ -108,17 +108,19 @@ function deco(r,p){const P=r.tp,E=carW(p)/2,m=p.med/2;let o=E;
  if(p.paved){for(let i=1;i<p.f;i++)strokeOff(P,m+i*p.lw,2,'#e5e7eb',[14,14]);for(let i=1;i<p.b;i++)strokeOff(P,-(m+i*p.lw),2,'#e5e7eb',[14,14]);if(p.b&&p.f&&!p.med)strokePath(P,2,'#facc15')}}
 function draw(){ctx.fillStyle='#14532d';ctx.fillRect(0,0,cv.width,cv.height);
  for(const lv of [-1,0,1]){const R=S.roads.filter(r=>r.level===lv);ctx.globalAlpha=lv<0?.45:1;
-  for(const r of R){const p=PRESETS[r.pk];if(lv>0)strokePath(r.pts,roadW(p)+8,BRC[p.br]||'#9ca3af');if(sideW(p))strokePath(r.pts,roadW(p),p.swc||'#b8b8b0')}
+  for(const r of R){const p=PRESETS[r.pk];if(lv>0){strokePath(r.pts,roadW(p)+22,'rgba(0,0,0,.35)');strokePath(r.pts,roadW(p)+8,BRC[p.br]||'#9ca3af')}if(sideW(p))strokePath(r.pts,roadW(p),p.swc||'#b8b8b0')}
   for(const r of R){const p=PRESETS[r.pk];strokePath(r.pts,carW(p),p.col);if(p.cul){const q=w2s(r.pts[r.pts.length-1]);ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(q.x,q.y,carW(p)*.9*S.cam.z,0,7);ctx.fill()}}
   for(const n of S.nodes||[]){if(S.roads[n.m[0].r].level!==lv)continue;const q=w2s(n.c);ctx.fillStyle='#3b3f46';ctx.beginPath();ctx.arc(q.x,q.y,(n.T+4)*S.cam.z,0,7);ctx.fill()}
   for(const l of S.lanes)if(l.conn&&S.roads[l.road].level===lv){const p=PRESETS[S.roads[l.road].pk];strokePath(l.pts,p.lw,p.col)}
-  for(const r of R)deco(r,PRESETS[r.pk]);ctx.globalAlpha=1}
- ctx.fillStyle='rgba(255,255,255,.85)';
- for(const l of S.lanes)if(!l.conn)for(let s=l.len*.5;s<l.len;s+=90){const p=at(l,s),q=w2s(p);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(p.a);ctx.scale(S.cam.z,S.cam.z);
-  ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.fill();ctx.restore()}
- for(const o of S.obst){const p=at(o.lane,o.s),q=w2s(p);ctx.fillStyle='#ef4444';ctx.fillRect(q.x-8*S.cam.z,q.y-8*S.cam.z,16*S.cam.z,16*S.cam.z)}
- for(const c of S.cars){const q=w2s(c);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(c.a);ctx.scale(S.cam.z,S.cam.z);ctx.fillStyle=c.col;ctx.fillRect(-12,-6,24,12);
-  ctx.fillStyle='#111';ctx.fillRect(3,-5,5,10);if(c.v<.05){ctx.fillStyle='#f00';ctx.fillRect(-13,-5,2,10)}ctx.restore()}
+  for(const r of R)deco(r,PRESETS[r.pk]);
+  const lvOf=l=>S.roads[l.road].level;
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  for(const l of S.lanes)if(!l.conn&&lvOf(l)===lv)for(let s=l.len*.5;s<l.len;s+=90){const p=at(l,s),q=w2s(p);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(p.a);ctx.scale(S.cam.z,S.cam.z);
+   ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.fill();ctx.restore()}
+  for(const o of S.obst)if(lvOf(o.lane)===lv){const p=at(o.lane,o.s),q=w2s(p);ctx.fillStyle='#ef4444';ctx.fillRect(q.x-8*S.cam.z,q.y-8*S.cam.z,16*S.cam.z,16*S.cam.z)}
+  for(const c of S.cars)if(lvOf(c.lane)===lv){const q=w2s(c);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(c.a);ctx.scale(S.cam.z,S.cam.z);ctx.fillStyle=c.col;ctx.fillRect(-12,-6,24,12);
+   ctx.fillStyle='#111';ctx.fillRect(3,-5,5,10);if(c.v<.05){ctx.fillStyle='#f00';ctx.fillRect(-13,-5,2,10)}ctx.restore()}
+  ctx.globalAlpha=1}
  if(S.pts.length){const P=[...S.pts,S.mouse];strokePath($('mode').value==='spline'?catmull(P):P,roadW(PRESETS[S.preset]),'rgba(129,140,248,.5)')}}
 // ===== Введення
 const toolbar=$('presets'),catBar=$('cats');let curCat=CATS[0];
@@ -166,3 +168,8 @@ $('v3').onclick=()=>{const on=$('c3d').classList.toggle('hidden')===false;if(on)
 let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;if(S.run)step(dt);
  if(!$('c3d').classList.contains('hidden'))draw3D();else draw();requestAnimationFrame(loop)})(last);
  
+
+
+
+
+
