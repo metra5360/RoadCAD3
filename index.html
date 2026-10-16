@@ -7,20 +7,13 @@
 <link rel="stylesheet" href="style.css"></head>
 <body style="background:#111827;color:#f3f4f6" class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
 <canvas id="c2d"></canvas><div id="c3d" class="hidden"></div>
-<div id="hint" class="absolute top-2 left-2 text-xs bg-gray-800/80 rounded px-2 py-1">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · Alt+клік — аварія · ПКМ+тягнути — панорама · колесо — масштаб</div>
+<div id="hint" class="absolute top-2 left-2 text-xs bg-gray-800/80 rounded px-2 py-1">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · Alt+клік — аварія · ПКМ+тягнути — панорама · колесо — масштаб · односторонка від траси/до траси = з'їзд/заїзд (автоматично)</div>
 <div id="bar" class="absolute bottom-0 inset-x-0 bg-gray-800/95 border-t border-gray-700 p-2 flex flex-wrap gap-2 items-center justify-center">
   <div id="cats" class="flex gap-1 w-full justify-center"></div><div id="presets" class="flex gap-1 flex-wrap justify-center max-h-24 overflow-y-auto"></div>
   <select id="mode" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="line">Пряма</option><option value="spline">Крива</option></select>
   <select id="level" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="0">Земля</option><option value="1">Міст</option><option value="-1">Тунель</option></select>
   <label class="text-sm"><input type="checkbox" id="par"> Паралельно</label>
   <label class="text-sm" title="Односторонка поруч з дорогою стає її новою смугою"><input type="checkbox" id="mrg" checked> Додавати смугу</label>
-  <button id="ramp" class="btn">↗ З'їзд/заїзд</button>
-  <span id="rampbox" class="hidden flex gap-2 items-center text-sm bg-gray-700 rounded px-2 py-1">
-   <select id="rkind" class="bg-gray-600 rounded"><option value="exit">З'їзд</option><option value="entry">Заїзд</option></select>
-   <select id="rside" class="bg-gray-600 rounded"><option value="r">Праворуч</option><option value="l">Ліворуч</option></select>
-   Кут <input id="rang" type="range" min="0" max="85" value="25"><b id="rangv" class="w-8">25°</b><span id="rhint" class="text-xs text-yellow-300"></span>
-   Довжина <input id="rlen" type="number" min="100" max="800" step="20" value="260" class="w-16 bg-gray-600 rounded px-1">
-  </span>
   <button id="sim" class="btn">▶ Трафік</button><button id="v3" class="btn">3D</button><button id="clr" class="btn">Очистити</button>
 </div>
 <script src="app.js"></script></body></html>
