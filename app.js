@@ -66,20 +66,19 @@ function trimPoly(P,a,b){const L=mkLane(P);
 function derive(pk,df,db){const key=pk+'|'+df+'|'+db;if(!PRESETS[key])PRESETS[key]={...PRESETS[pk],f:PRESETS[pk].f+df,b:PRESETS[pk].b+db,n:PRESETS[pk].n+' +',cat:undefined};return key}
 function tryMerge(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||($('mrg')&&$('mrg').checked===false))return false;
  const L=mkLane(c);if(L.len<40)return false;const smp=[];for(let t=0;t<L.len;t+=20)smp.push(at(L,t));smp.push(at(L,L.len));
- let best=null;
+ const hn=pn.f*pn.lw/2;let best=null;
  for(const r of S.roads){if(r.level!==lv||r.ramp)continue;const po=PRESETS[r.pk];if(po.f+po.b<1||po.w||po.f+po.b+pn.f>10)continue;
-  const Dexp=laneW(po)/2+pn.f*po.lw/2;let same=null,side=null,sum=0,ok=true;
-  for(const q of smp){const n=nearestOn(r.pts,q),a=r.pts[n.i],b=r.pts[n.i+1],h0=Math.atan2(b.y-a.y,b.x-a.x);
-   const lat=(q.x-n.x)*-Math.sin(h0)+(q.y-n.y)*Math.cos(h0)-(r.sh||0),mag=Math.abs(lat),df=Math.atan2(Math.sin(q.a-h0),Math.cos(q.a-h0));
-   const sm=Math.abs(df)<.5?1:Math.abs(df)>Math.PI-.5?-1:0,sd=Math.sign(lat);
-   if(!sm||mag<Dexp*.4||mag>Dexp+30||(same!==null&&(sm!==same||sd!==side))){ok=false;break}same=sm;side=sd;sum+=Math.abs(mag-Dexp)}
-  if(!ok)continue;
-  const right=side>0;let df=0,db=0;
-  if(same>0){if(!right&&po.b>0)continue;df=pn.f}else{if(po.b<=0||right)continue;db=pn.f}
-  if(!best||sum<best.sum)best={r,sum,df,db,sh:(right?1:-1)*pn.f*po.lw/2}}
+  const Hw=laneW(po)/2,ok=[],lats=[];
+  for(const q of smp){const nn=nearestOn(r.pts,q),a=r.pts[nn.i],b=r.pts[nn.i+1],h0=Math.atan2(b.y-a.y,b.x-a.x);
+   const lat=(q.x-nn.x)*-Math.sin(h0)+(q.y-nn.y)*Math.cos(h0)-(r.sh||0),df=Math.abs(Math.atan2(Math.sin(q.a-h0),Math.cos(q.a-h0)));
+   ok.push((df<.6||df>Math.PI-.6)&&Math.abs(lat)>=Hw+hn*.3&&Math.abs(lat)<=Hw+hn+45&&Math.hypot(q.x-nn.x,q.y-nn.y)<Math.abs(lat)+8);lats.push(lat)} // остання умова: точка не «за кінцем» дороги // біля КРАЮ смуг, а не осі дороги
+  let bi=-1,bj=-1,i=0;while(i<ok.length){if(!ok[i]){i++;continue}let j=i;while(j+1<ok.length&&ok[j+1]&&Math.sign(lats[j+1])===Math.sign(lats[i]))j++;if(j-i>bj-bi){bi=i;bj=j}i=j+1}
+  if(bi<0||(bj-bi)*20<40||bi*20>80||(ok.length-1-bj)*20>80)continue; // надлишок малювання за межами дороги ≤80 ігноруємо
+  const side=Math.sign(lats[bi]),sc=lats.slice(bi,bj+1).reduce((s,x)=>s+Math.abs(Math.abs(x)-Hw-hn),0)/(bj-bi+1);
+  if(!best||sc<best.sc)best={r,sc,bi,bj,df:side>0||po.b===0?pn.f:0,db:side<0&&po.b>0?pn.f:0,sh:side*pn.f*po.lw/2}}
  if(!best)return false;
- const r=best.r,cuts=[];for(const q of [smp[0],smp[smp.length-1]]){const n=nearestOn(r.pts,q),e0=dist(n,r.pts[0]),e1=dist(n,r.pts[r.pts.length-1]);if(e0>15&&e1>15)cuts.push(n)}
- let target=r;if(cuts.length){const pcs=splitRoad(r,cuts),mid=smp[smp.length>>1];target=pcs.reduce((a,b)=>{const m=p=>{const l=mkLane(p.pts);return dist(at(l,l.len/2),mid)};return m(b)<m(a)?b:a})}
+ const r=best.r,cuts=[];for(const q of [smp[best.bi],smp[best.bj]]){const nn=nearestOn(r.pts,q);if(dist(nn,r.pts[0])>15&&dist(nn,r.pts[r.pts.length-1])>15)cuts.push(nn)}
+ let target=r;if(cuts.length){const pcs=splitRoad(r,cuts),mid=smp[(best.bi+best.bj)>>1];target=pcs.reduce((a,b)=>{const mm=p=>{const l=mkLane(p.pts);return dist(at(l,l.len/2),mid)};return mm(b)<mm(a)?b:a})}
  target.pk=derive(target.pk,best.df,best.db);target.sh=(target.sh||0)+best.sh;buildGraph();toast('Додано смугу до існуючої дороги');return true}
 function addRoad(pts,pk,lv,sp,nm){let c=sp?smoothPath(pts):pts.map(p=>({...p}));if(!nm&&(autoRamp(c,pk,lv)||tryMerge(c,pk,lv)||autoLevelRamp(c,pk,lv)))return; // пріоритет: з'їзд/заїзд (кінець на тілі дороги) → смуга поруч → рампа між рівнями
  for(const k of [0,c.length-1]){const e=c[k];let hit=false;const same=S.roads.filter(r=>r.level===lv);
@@ -99,6 +98,15 @@ function makeArms(n){const A=[];for(const q of n.m){const r=S.roads[q.r],tp=r.tp
 function makeSignal(A){const ph=[],used=new Set();A.forEach((a,i)=>{if(used.has(i))return;used.add(i);let j=-1,bd=-.7;
   A.forEach((b,k)=>{if(!used.has(k)){const dot=a.d.x*b.d.x+a.d.y*b.d.y;if(dot<bd){bd=dot;j=k}}});if(j>=0)used.add(j);ph.push(j>=0?[i,j]:[i])});
  return{ph,cur:0,t:Math.random()*5}}
+/** Чи потрібен світлофор: ≥3 «значущі» рукави (≥2 смуги), без шосе/ґрунтовок/рамп, кути між рукавами ≥ ~54° (не злиття Y), є ≥3 напрямки заїзду. */
+function shouldSignal(nd){const A=nd.arms;if(A.length<3)return false;let appr=0,big=0,minGap=9;
+ for(const a of A){const r=S.roads[a.r],pr=PRESETS[r.pk];if(r.ramp||pr.barrier||pr.v>=3||pr.w||!pr.paved)return false;
+  if(pr.f+pr.b>=2)big++;if(a.e?pr.f>0:pr.b>0)appr++}
+ A.forEach((a,i)=>{const b=A[(i+1)%A.length],g=((b.a-a.a)+2*Math.PI)%(2*Math.PI)||2*Math.PI;if(g<minGap)minGap=g});
+ return big>=3&&appr>=3&&minGap>.95}
+/** Чи перетинаються (або майже зливаються) траєкторії двох з'єднань у вузлі. */
+function pathsCross(a,b){for(let i=0;i<a.pts.length-1;i++)for(let j=0;j<b.pts.length-1;j++)if(segInt(a.pts[i],a.pts[i+1],b.pts[j],b.pts[j+1]))return true;
+ for(const p of a.pts)for(const q of b.pts)if(Math.hypot(p.x-q.x,p.y-q.y)<14)return true;return false}
 function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==undefined&&e===r.attEnd?r.from:r.level};S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t1=0);
  const eps=[];S.roads.forEach((r,i)=>[0,1].forEach(e=>{if((r.ramp==='exit'||r.ramp==='entry')&&e===(r.ramp==='exit'?0:1))return;eps.push({r:i,e,p:e?r.pts[r.pts.length-1]:r.pts[0]})}));
  // Вузли: кластеризація кінців доріг одного рівня через сітку (замість O(n²))
@@ -107,11 +115,13 @@ function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==und
   for(let dx=-1;dx<=1&&!n;dx++)for(let dy=-1;dy<=1&&!n;dy++){const b=grid.get(lvq+':'+(gx+dx)+':'+(gy+dy));if(b)n=b.find(m=>dist(m.c,q.p)<14)||null}
   if(!n){n={lv:lvq,c:{x:q.p.x,y:q.p.y},m:[]};nodes.push(n);const k=lvq+':'+gx+':'+gy;(grid.get(k)||grid.set(k,[]).get(k)).push(n)}n.m.push(q)}
  S.nodes=nodes.filter(n=>n.m.length>1);
- for(const n of S.nodes){n.mw=Math.max(...n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])));n.T=n.m.length>2?n.mw*.5+28:4;n.m.forEach(q=>S.roads[q.r]['t'+q.e]=n.T)}
+ for(const n of S.nodes){const ws=n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])/2);n.mw=Math.max(...ws)*2;n.T=4;
+  n.m.forEach((q,i)=>{const T=n.m.length>2?Math.max(...ws.filter((_,j)=>j!==i))+22:4;S.roads[q.r]['t'+q.e]=T;if(T>n.T)n.T=T})} // відступ рукава = півширина найширшої ІНШОЇ дороги + запас на заокруглення
  S.roads.forEach((r,ri)=>{const pr=PRESETS[r.pk],m=pr.med/2;r.dp=r.sh?offsetLine(r.pts,r.sh):r.pts;r.tp=trimPoly(r.dp,r.t0,r.t1);
   const mk=(d,rev,idx)=>{const Q=offsetLine(r.tp,d);if(rev)Q.reverse();const l=mkLane(Q);Object.assign(l,{road:ri,dir:rev?-1:1,idx,nl:rev?pr.b:pr.f,next:[],nb:[]});S.lanes.push(l)};
   for(let i=0;i<pr.f;i++)mk(laneOff(pr,0,i),0,i);for(let i=0;i<pr.b;i++)mk(laneOff(pr,1,i),1,i)});
- for(const nd of S.nodes){nd.arms=makeArms(nd);nd.sig=nd.arms.length>=3?makeSignal(nd.arms):null;nd.sigLanes=[]} // рукави + світлофор на розвилках (≥3 рукави)
+ for(const nd of S.nodes){nd.arms=makeArms(nd);nd.sig=shouldSignal(nd)?makeSignal(nd.arms):null;nd.sigLanes=[];nd.conns=[]}
+ for(const a of S.nodes)if(a.sig)for(const b of S.nodes)if(b!==a&&b.sig&&b.lv===a.lv&&dist(a.c,b.c)<150&&(b.arms.length>a.arms.length||(b.arms.length===a.arms.length&&S.nodes.indexOf(b)<S.nodes.indexOf(a)))){a.sig=null;break} // два світлофори впритул — лишаємо один
  S.lanes=S.lanes.filter(l=>l.len>=1&&l.pts.length>1); // відкидаємо виродженi смуги (краш at())
  const conns=[],wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
  // З'єднання смуг на вузлах: беремо кандидатів із хешу кінців/початків, а не всі пари смуг
@@ -124,13 +134,18 @@ function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==und
     const ok=ab<.5?b.idx===Math.min(a.idx,b.nl-1):turn>0?(a.idx===a.nl-1&&b.idx===b.nl-1):(a.idx===0&&b.idx===0);if(!ok)continue;
     const p0=a.pts[a.pts.length-1],p1=b.pts[0],ct=ab<.5?{x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2}:n.c,Q=[];
     for(let k=0;k<=10;k++){const t=k/10,u=1-t;Q.push({x:u*u*p0.x+2*u*t*ct.x+t*t*p1.x,y:u*u*p0.y+2*u*t*ct.y+t*t*p1.y})}
-    const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,turn,next:[b],nb:[]});conns.push(l);a.next.push(l);b.hasIn=true}}}
+    const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,turn,src:a,dst:b,occ:0,next:[b],nb:[]});conns.push(l);n.conns.push(l);a.next.push(l);b.hasIn=true}}}
  const link=(a,b)=>{const p0=a.pts[a.pts.length-1],p1=b.pts[0],Q=[];for(let k=0;k<=6;k++){const t=k/6;Q.push({x:p0.x+(p1.x-p0.x)*t,y:p0.y+(p1.y-p0.y)*t})}
-  const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,next:[b],nb:[]});conns.push(l);a.next.push(l);b.hasIn=true};
+  const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,src:a,dst:b,occ:0,next:[b],nb:[]});conns.push(l);a.next.push(l);b.hasIn=true};
  S.roads.forEach((r,ri)=>{if(r.ramp!=='exit'&&r.ramp!=='entry')return;const rl=S.lanes.find(l=>l.road===ri&&!l.conn);if(!rl)return;const ex=r.ramp==='exit',q=ex?rl.pts[0]:rl.pts[rl.pts.length-1];let best=null,bd=220;
   for(const o of S.lanes){if(o.conn||o.road===ri||S.roads[o.road].level!==r.level)continue;const e=ex?o.pts[o.pts.length-1]:o.pts[0],d=dist(e,q);
    const dh=Math.abs(wrap((ex?at(o,o.len).a:at(o,0).a)-(ex?at(rl,0).a:at(rl,rl.len).a)));if(d<bd&&dh<1.6){bd=d;best=o}}
   r.linked=!!best;if(best)ex?link(best,rl):link(rl,best)});
+ // Конфлікти між з'єднаннями: злиття в одну смугу або перетин траєкторій у вузлі (з однієї смуги-джерела — не конфлікт)
+ const byDst=new Map(),addConf=(x,y)=>{if(x.src!==y.src&&!x.conf.includes(y)){x.conf.push(y);y.conf.push(x)}};
+ for(const l of conns){l.conf=[];(byDst.get(l.dst)||byDst.set(l.dst,[]).get(l.dst)).push(l)}
+ for(const g of byDst.values())for(let i=0;i<g.length;i++)for(let j=i+1;j<g.length;j++)addConf(g[i],g[j]);
+ for(const nd of S.nodes)for(let i=0;i<nd.conns.length;i++)for(let j=i+1;j<nd.conns.length;j++)if(pathsCross(nd.conns[i],nd.conns[j]))addConf(nd.conns[i],nd.conns[j]);
  S.lanes.push(...conns);
  // Сусідні смуги одного напрямку (для перестроювання): групуємо за дорогою+напрямком
  const grp=new Map();for(const l of S.lanes){if(l.conn)continue;const k=l.road*3+l.dir+1;(grp.get(k)||grp.set(k,[]).get(k)).push(l)}
@@ -140,7 +155,7 @@ function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==und
 'use strict';
 /* СИМУЛЯЦІЯ ТРАФІКУ: IDM (слідування за лідером) + перестроювання.
    Оптимізація: авто індексуються по смугах (відсортовані за s) → пошук лідера O(log n), загалом O(n log n) замість O(n²). */
-const SIM={dt:1/60,spawnP:.04,perLane:6,maxCars:900,rev:-1,arev:-1,active:[],spawnLanes:[]};
+const SIM={nid:0,dt:1/60,spawnP:.04,perLane:6,maxCars:900,rev:-1,arev:-1,active:[],spawnLanes:[]};
 const roadOf=l=>S.roads[l.road];
  
 /** Перебудова індексу: lane.cars (за зростанням s) + аварії як нерухомі «авто-перешкоди».
@@ -172,55 +187,87 @@ function leaderCars(c){const lane=c.lane,a=gapAhead(lane,c.s,c);if(a.o||!lane.ne
  
 /** Маршрут через перехрестя: «ціль» (планується при в'їзді на дорогу) → запасний варіант, якщо ціль недосяжна з поточної смуги. */
 function routeFor(c){const l=c.lane;if(c.route&&l.next.includes(c.route))return c.route;if(c.alt&&l.next.includes(c.alt))return c.alt;return c.alt=pickNext(l)}
+/** Чи вже хтось із сусідніх смуг перестроюється в цю смугу поруч із нами (резерв). */
+function laneTaken(nb,c){for(const m of nb.nb)for(const o of m.cars)if(o!==c&&o.want===nb&&Math.abs(o.s-c.s)<50)return true;return false}
 /** Планування: заздалегідь обираємо напрямок на найближчому перехресті (прямо ×3, поворот ×1) і смугу, з якої він доступний. */
 function planGoal(c){const l=c.lane;c.route=c.goal=c.alt=null;if(l.conn||!l.grp)return;let tot=0;const o=[];
  for(const g of l.grp)for(const nx of g.next){const w=Math.abs(nx.turn||0)<.5?3:1;o.push({g,nx,w});tot+=w}
  if(!o.length)return;let r=Math.random()*tot;for(const x of o){r-=x.w;if(r<=0){c.goal=x.g;c.route=x.nx;return}}}
 /** Обов'язкове перестроювання до смуги-цілі (перед поворотом), якщо в сусідній смузі безпечний проміжок. */
 function tryGoalChange(c){const g=c.goal,d0=Math.abs(c.lane.idx-g.idx);
- for(const nb of c.lane.nb){if(Math.abs(nb.idx-g.idx)>=d0)continue;const s2=c.s*nb.len/c.lane.len,f=gapAhead(nb,s2,null),bk=lastBehind(nb,s2);
-  if(f.gap>25&&!(bk&&s2-bk.s<28&&bk.v>c.v*1.05)){c.want=nb;return}}}
+ for(const nb of c.lane.nb){if(Math.abs(nb.idx-g.idx)>=d0||laneTaken(nb,c))continue;const s2=c.s*nb.len/c.lane.len,f=gapAhead(nb,s2,null),bk=lastBehind(nb,s2);
+  if(f.gap>32&&!(bk&&(s2-bk.s<36||(s2-bk.s<55&&bk.v>c.v*1.05)))){c.want=nb;return}}}
 /** Світлофори: цикл фаз (зелений/жовтий/червоний); стан смуги залежить від рукава вузла. */
 const SIG={G:9,Y:1.5,R:1.2};
 function sigState(s){const p=s.n.sig;if(!p.ph[p.cur].includes(s.arm))return'r';return p.t<SIG.G?'g':p.t<SIG.G+SIG.Y?'y':'r'}
 function updateSignals(dt){for(const n of S.nodes){const p=n.sig;if(!p)continue;p.t+=dt;if(p.t>=SIG.G+SIG.Y+SIG.R){p.t=0;p.cur=(p.cur+1)%p.ph.length}}}
 /** Червоний/жовтий = віртуальна нерухома перешкода на стоп-лінії (на жовтий їдемо далі, якщо вже не встигнемо загальмувати). */
-function signalStop(c){const s=c.lane.sig;if(!s)return null;const st=sigState(s);if(st==='g')return null;const gap=c.lane.len-c.s-8;if(gap<-2)return null;
- if(st==='y'&&gap<c.v*25)return null;return{o:{v:0,s:c.lane.len,obst:true},gap:Math.max(gap,.5)}}
-function leader(c){const a=leaderCars(c),g=signalStop(c);return g&&g.gap<a.gap?g:a}
+const STOP=14; // центр авто зупиняється за 14 од. до кінця смуги (ніс — біля стоп-лінії)
+/** Відстань до стоп-лінії, якщо треба зупинитись (червоний; жовтий — якщо ще можна загальмувати), інакше null. */
+function signalHold(c){const s=c.lane.sig;if(!s)return null;const st=sigState(s);if(st==='g')return null;const d=c.lane.len-STOP-c.s;if(d<-1)return null;if(st==='y'&&d<c.v*12)return null;return Math.max(d,0)}
+/** Правило проїзду вузла: стоп-лінія «закрита», якщо наступне з'єднання конфліктує із зайнятим (перетин/злиття) або за вузлом немає місця
+    (не блокуємо перехрестя). Аварійне розблокування — якщо авто чекає >15 с. */
+function junctionHold(c){const l=c.lane;if(l.conn||!l.next.length||c.jw>900)return null;const d=l.len-STOP-c.s;if(d<-1||d>40)return null;
+ const nx=routeFor(c);if(!nx||!nx.conf)return null;for(const k of nx.conf)if(k.occ>0)return Math.max(d,0);
+ const b=nx.next[0];if(b&&b.cars.length&&b.cars[0].s<28)return Math.max(d,0);return null}
+const holdLine=c=>{const a=signalHold(c),b=junctionHold(c);return a===null?b:b===null?a:Math.min(a,b)};
+function signalStop(c){const d=holdLine(c);return d===null?null:{o:{v:0,s:c.lane.len,obst:true},gap:Math.max(d,.5)}}
+/** Просторовий хеш авто (оновлюється раз на крок) — для перевірки зіткнень на перехрестях і при перестроюванні. */
+const CH={m:new Map(),used:[]},CELL=64;
+function hashCars(){for(const k of CH.used)CH.m.get(k).length=0;CH.used.length=0;
+ for(const c of S.cars){const k=Math.floor(c.x/CELL)*65537+Math.floor(c.y/CELL);let a=CH.m.get(k);if(!a)CH.m.set(k,a=[]);if(!a.length)CH.used.push(k);a.push(c)}}
+/** Перешкода-авто попереду по ходу (вузький конус): авто з іншої смуги, чия траєкторія перетинається. Гальмуємо за ним, як за лідером.
+    Якщо стоїмо через це >3 с (взаємне блокування) — конус тимчасово ігноруємо. */
+function coneStop(c){if(c.cw>180||c.lane.conn)return null;const D=16+Math.min(c.v*30,80),ca=Math.cos(c.a),sa=Math.sin(c.a),gx=Math.floor(c.x/CELL),gy=Math.floor(c.y/CELL);let best=null,bg=1e9;
+ for(let ix=gx-2;ix<=gx+2;ix++)for(let iy=gy-2;iy<=gy+2;iy++){const a=CH.m.get(ix*65537+iy);if(!a)continue;
+  for(const o of a){if(o===c||o.lane===c.lane)continue;const dx=o.x-c.x,dy=o.y-c.y,f=dx*ca+dy*sa;if(f<=0||f>D+13)continue;if(Math.abs(-dx*sa+dy*ca)>14)continue;
+   const g=f-13;if(g<bg){bg=g;best=o}}}
+ return best?{o:best,gap:Math.max(bg,.5)}:null}
+/** Лідер = найближча з перешкод: авто в смузі / світлофор / авто на перетині траєкторій. */
+function leader(c){let r=leaderCars(c);if(c.want){const g=gapAhead(c.want,c.s*c.want.len/c.lane.len,null);if(g.gap<r.gap)r=g} // під час перестроювання рахуємо й лідера цільової смуги
+ const g=signalStop(c);if(g&&g.gap<r.gap)r=g;const k=coneStop(c);if(k&&k.gap<r.gap)r={o:k.o,gap:k.gap,cone:true};return r}
+ 
  
 function spawnCars(){
  if(SIM.rev!==S.rev){SIM.spawnLanes=S.lanes.filter(l=>!l.conn&&!l.hasIn);SIM.rev=S.rev}
  const sp=SIM.spawnLanes;if(!sp.length||Math.random()>=SIM.spawnP||S.cars.length>=Math.min(SIM.maxCars,S.lanes.length*SIM.perLane))return;
  const l=sp[(Math.random()*sp.length)|0];if(l.cars[0]&&l.cars[0].s<40)return;
- const p=at(l,5);S.cars.push({lane:l,s:5,v:0,lat:0,col:`hsl(${Math.random()*360|0},60%,55%)`,vm:.8+Math.random()*.3,want:null,route:null,x:p.x,y:p.y,a:p.a});planGoal(S.cars[S.cars.length-1])}
+ const p=at(l,5);S.cars.push({lane:l,s:5,v:0,lat:0,col:`hsl(${Math.random()*360|0},60%,55%)`,vm:.8+Math.random()*.3,want:null,route:null,x:p.x,y:p.y,a:p.a,id:++SIM.nid,cw:0});planGoal(S.cars[S.cars.length-1])}
  
 /** Перестроювання: обганяємо повільного лідера, якщо в сусідній смузі є вільне місце попереду й позаду. */
 function tryLaneChange(c,L){
- for(const nb of c.lane.nb){if(c.goal&&c.lane.len-c.s<350&&Math.abs(nb.idx-c.goal.idx)>Math.abs(c.lane.idx-c.goal.idx))continue; // не відходимо від смуги-цілі біля перехрестя
+ for(const nb of c.lane.nb){if(laneTaken(nb,c))continue;
+  if(c.goal&&c.lane.len-c.s<350&&Math.abs(nb.idx-c.goal.idx)>Math.abs(c.lane.idx-c.goal.idx))continue; // не відходимо від смуги-цілі біля перехрестя
   const s2=c.s*nb.len/c.lane.len,f=gapAhead(nb,s2,null),bk=lastBehind(nb,s2);
-  if(f.gap>L.gap+20&&f.gap>35&&!(bk&&s2-bk.s<34&&bk.v>c.v*.9)){c.want=nb;return}}}
-function advanceLaneChange(c,dt){const nb=c.want,lw=PRESETS[roadOf(c.lane).pk].lw,tgt=-(nb.idx-c.lane.idx)*lw; // lat>0 — ліворуч
+  if(f.gap>L.gap+20&&f.gap>35&&!(bk&&(s2-bk.s<36||(s2-bk.s<55&&bk.v>c.v*1.05)))){c.want=nb;return}}}
+function advanceLaneChange(c,dt){const nb=c.want,lw=PRESETS[roadOf(c.lane).pk].lw,tgt=-(nb.idx-c.lane.idx)*lw,s2=c.s*nb.len/c.lane.len; // lat>0 — ліворуч
+ // скасовуємо маневр (поки ще <70% шляху), якщо поруч з'явилось авто або ми зупинились — тоді повертаємось у свою смугу
+ if(Math.abs(c.lat)<.7*Math.abs(tgt)&&(c.v<.05||nb.cars.some(o=>o!==c&&Math.abs(o.s-s2)<30))){c.want=null;return}
  c.lat+=Math.sign(tgt)*dt*40*(c.v>.1?1:0);
  if(Math.abs(c.lat)>=Math.abs(tgt)-.5){c.s=c.s*nb.len/c.lane.len;c.lane=nb;c.lat=0;c.want=null;c.alt=null}}
 /** Перехід на наступну смугу (до 4 коротких з'єднань за крок); немає продовження → авто зникає. */
 function advanceLane(c){let g=0;while(c.s>=c.lane.len&&g++<4){const n=routeFor(c);
- if(!n){c.dead=true;return}c.s-=c.lane.len;c.lane=n;c.lat=0;c.want=null;planGoal(c)}}
+ if(!n){c.dead=true;return}c.s-=c.lane.len;if(c.lane.conn)c.lane.occ--;if(c.res&&c.res!==n)c.res.occ--;if(n.conn&&c.res!==n)n.occ=(n.occ||0)+1;c.res=null;c.lane=n;c.lat=0;c.want=null;planGoal(c)}}
  
 function updateCar(c,dt){
+ c.stall=c.v<.01?(c.stall||0)+1:0;if(c.stall>1800&&signalHold(c)===null){if(c.lane.conn)c.lane.occ--;if(c.res)c.res.occ--;c.dead=true;return} // анти-затор (взаємне блокування коротких ділянок)
  const pr=PRESETS[roadOf(c.lane).pk],vmax=pr.v*c.vm,L=leader(c),dv=L.o?c.v-L.o.v:0;
  const sStar=12+Math.max(0,c.v*8+c.v*dv*8/(2*Math.sqrt(.06*.12)));
  const acc=.06*(1-Math.pow(c.v/vmax,4)-(L.o?Math.pow(sStar/Math.max(L.gap,1),2):0));
  c.v=Math.max(0,c.v+acc*dt*30);
- if(!c.want&&c.goal&&c.goal!==c.lane&&c.s>8)tryGoalChange(c);
- if(!c.want&&c.lane.nb.length&&L.o&&L.gap<60&&L.o.v<vmax*.7)tryLaneChange(c,L);
- if(c.want)advanceLaneChange(c,dt);
- c.s+=c.v*dt*60;if(c.s>=c.lane.len)advanceLane(c);if(c.dead)return;
+ if(!c.want&&c.v>.2&&c.goal&&c.goal!==c.lane&&c.s>8)tryGoalChange(c);
+ if(!c.want&&c.v>.2&&c.lane.nb.length&&L.o&&L.gap<60&&L.o.v<vmax*.7)tryLaneChange(c,L);
+ if(c.want)advanceLaneChange(c,dt);else if(c.lat)c.lat-=Math.sign(c.lat)*Math.min(Math.abs(c.lat),dt*40); // повернення в центр смуги після скасованого маневру
+ const sh=signalHold(c),jh=junctionHold(c),hd=sh===null?jh:jh===null?sh:Math.min(sh,jh);c.jw=jh!==null&&c.v<.05?(c.jw||0)+1:0;
+ if(!c.lane.conn&&!c.res&&jh===null&&c.lane.len-STOP-c.s<=6){const nx=routeFor(c);if(nx&&nx.conf){nx.occ++;c.res=nx}} // резерв: з цього моменту конфліктні напрямки чекають
+ let ds=c.v*dt*60;if(hd!==null&&ds>hd){ds=hd;c.v=0} // жорстка зупинка на стоп-лінії: червоний не проїхати за жодних умов
+ c.cw=L.cone&&c.v<.05?(c.cw||0)+1:0;
+ c.s+=ds;if(c.s>=c.lane.len)advanceLane(c);if(c.dead)return;
  const p=at(c.lane,c.s);c.x=p.x+Math.sin(p.a)*c.lat;c.y=p.y-Math.cos(p.a)*c.lat;
  c.a+=(((p.a-c.a+Math.PI*3)%(Math.PI*2))-Math.PI)*.25}
  
 /** Один фіксований крок симуляції. Мертві авто видаляються на місці (без нових масивів → менше GC). */
-function step(dt){indexCars();updateSignals(dt);spawnCars();const cs=S.cars;let w=0;for(let i=0;i<cs.length;i++){const c=cs[i];updateCar(c,dt);if(!c.dead)cs[w++]=c}cs.length=w}
+function step(dt){indexCars();hashCars();updateSignals(dt);spawnCars();const cs=S.cars;let w=0;for(let i=0;i<cs.length;i++){const c=cs[i];updateCar(c,dt);if(!c.dead)cs[w++]=c}cs.length=w}
  
 /* ===== js/render2d.js ===== */
 'use strict';
@@ -249,8 +296,8 @@ function drawJunction(n){const A=n.arms;if(!A||A.length<2)return;ctx.fillStyle=A
  const P=(a,sg)=>w2s({x:a.p.x-a.d.y*a.w*sg,y:a.p.y+a.d.x*a.w*sg});ctx.beginPath();
  A.forEach((a,i)=>{const b=A[(i+1)%A.length],pa=P(a,1),pb=P(b,-1);if(!i){const p0=P(a,-1);ctx.moveTo(p0.x,p0.y)}ctx.lineTo(pa.x,pa.y);
   const gap=((b.a-a.a)+2*Math.PI)%(2*Math.PI)||2*Math.PI;let k=null;
-  if(gap<3.0){const ax=a.p.x-a.d.y*a.w,ay=a.p.y+a.d.x*a.w,bx=b.p.x+b.d.y*b.w,by=b.p.y-b.d.x*b.w,den=a.d.x*b.d.y-a.d.y*b.d.x;
-   if(Math.abs(den)>1e-3){const t=((bx-ax)*b.d.y-(by-ay)*b.d.x)/den;if(Math.abs(t)<n.T*3+60)k=w2s({x:ax+a.d.x*t,y:ay+a.d.y*t})}}
+  if(gap<2.6){const ax=a.p.x-a.d.y*a.w,ay=a.p.y+a.d.x*a.w,bx=b.p.x+b.d.y*b.w,by=b.p.y-b.d.x*b.w,den=a.d.x*b.d.y-a.d.y*b.d.x;
+   if(Math.abs(den)>1e-3){const t=((bx-ax)*b.d.y-(by-ay)*b.d.x)/den;if(Math.abs(t)<n.T*1.5+40)k=w2s({x:ax+a.d.x*t,y:ay+a.d.y*t})}}
   if(k)ctx.quadraticCurveTo(k.x,k.y,pb.x,pb.y);else ctx.lineTo(pb.x,pb.y)});
  ctx.closePath();ctx.fill()}
 /** Стоп-лінії світлофорів (динамічні, малюються поверх кешованих шарів). */
