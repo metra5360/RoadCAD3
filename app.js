@@ -33,7 +33,17 @@ const s2w=(x,y)=>({x:(x-cv.width/2)/S.cam.z+S.cam.x,y:(y-cv.height/2)/S.cam.z+S.
 function smoothPath(P,iter=4){if(P.length<3)return P;let A=P.map(p=>({x:p.x,y:p.y}));
  for(let k=0;k<iter;k++){const B=[A[0]];for(let i=0;i<A.length-1;i++){const p=A[i],q=A[i+1];B.push({x:.75*p.x+.25*q.x,y:.75*p.y+.25*q.y},{x:.25*p.x+.75*q.x,y:.25*p.y+.75*q.y})}B.push(A[A.length-1]);A=B}
  return A}
-function offsetLine(P,d){return P.map((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)];let dx=b.x-a.x,dy=b.y-a.y;const l=Math.hypot(dx,dy)||1;return{x:p.x-dy/l*d,y:p.y+dx/l*d}})}
+/** Прибирає (майже) однакові сусідні точки: нульові сегменти ламають нормалі → стрибки смуг/розмітки та «криві» авто. Кінці зберігаються. */
+function cleanPath(P,min=.75){if(P.length<3)return P;const o=[P[0]];for(let i=1;i<P.length;i++){const p=P[i],q=o[o.length-1];
+  if(Math.hypot(p.x-q.x,p.y-q.y)>=min)o.push(p);else if(i===P.length-1){if(o.length>1)o[o.length-1]=p;else o.push(p)}}return o}
+/** Паралельна лінія на відстані d (праворуч за напрямком, d<0 — ліворуч). Стійка до нульових сегментів; на зломах зсув
+    компенсується (міtre, ×≤2), тож відстань до осі лишається сталою. */
+function offsetLine(P,d){const n=P.length;if(n<2)return P.map(p=>({x:p.x,y:p.y}));const T=[];
+ for(let i=0;i<n-1;i++){const dx=P[i+1].x-P[i].x,dy=P[i+1].y-P[i].y,l=Math.hypot(dx,dy);T.push(l>1e-6?{x:dx/l,y:dy/l}:null)}
+ let last=null;for(let i=0;i<T.length;i++){if(T[i])last=T[i];else if(last)T[i]=last}
+ last=null;for(let i=T.length-1;i>=0;i--){if(T[i])last=T[i];else T[i]=last||{x:1,y:0}}
+ return P.map((p,i)=>{const a=T[Math.max(0,i-1)],b=T[Math.min(T.length-1,i)];let tx=a.x+b.x,ty=a.y+b.y,l=Math.hypot(tx,ty);if(l<1e-6){tx=b.x;ty=b.y;l=1}tx/=l;ty/=l;
+  const k=1/Math.max(.5,tx*b.x+ty*b.y);return{x:p.x-ty*d*k,y:p.y+tx*d*k}})}
 function mkLane(pts){let L=0;const cum=[0];for(let i=1;i<pts.length;i++){L+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);cum.push(L)}return{pts,cum,len:L,cars:[]}}
 /** Точка на смузі на відстані s: бінарний пошук сегмента (O(log n) замість O(n)). */
 function at(l,s){s=s<0?0:s>l.len?l.len:s;const cum=l.cum;let lo=1,hi=cum.length-1;
@@ -56,11 +66,11 @@ function segInt(a,b,c,d){const r={x:b.x-a.x,y:b.y-a.y},s={x:d.x-c.x,y:d.y-c.y},d
  const t=((c.x-a.x)*s.y-(c.y-a.y)*s.x)/den,u=((c.x-a.x)*r.y-(c.y-a.y)*r.x)/den;return t>.001&&t<.999&&u>.001&&u<.999?{t,u,x:a.x+r.x*t,y:a.y+r.y*t}:null}
 function cutPoly(P,cuts){cuts.sort((a,b)=>a.i+a.t-b.i-b.t);const out=[];let cur=[P[0]],ci=0;
  for(let i=0;i<P.length-1;i++){while(ci<cuts.length&&cuts[ci].i===i){const q={x:cuts[ci].x,y:cuts[ci].y};cur.push(q);out.push(cur);cur=[q];ci++}cur.push(P[i+1])}
- out.push(cur);return out.filter(p=>mkLane(p).len>6)}
+ out.push(cur);return out.map(p=>cleanPath(p)).filter(p=>p.length>1&&mkLane(p).len>6)}
 function splitRoad(r,cuts){S.roads=S.roads.filter(x=>x!==r);const out=[];for(const p of cutPoly(r.pts,cuts)){const q={pts:p,pk:r.pk,level:r.level,sh:r.sh};S.roads.push(q);out.push(q)}return out}
 function trimPoly(P,a,b){const L=mkLane(P);
  if(L.len<a+b+12){if(L.len<16)return P;const k=(L.len-12)/(a+b);a*=k;b*=k} // коротка ділянка між вузлами: пропорційно зменшуємо відступи, лишаючи ≥12 одиниць смуги
- const o=[at(L,a)];for(let i=1;i<P.length-1;i++)if(L.cum[i]>a&&L.cum[i]<L.len-b)o.push(P[i]);o.push(at(L,L.len-b));return o.map(p=>({x:p.x,y:p.y}))}
+ const o=[at(L,a)];for(let i=1;i<P.length-1;i++)if(L.cum[i]>a&&L.cum[i]<L.len-b)o.push(P[i]);o.push(at(L,L.len-b));return cleanPath(o.map(p=>({x:p.x,y:p.y})))}
 // Додавання дороги з АВТО-перехрестями: прилипання кінців, Т‑розгалуження, перетини X
 // Авто-об'єднання: нова односторонка поруч з дорогою стає її додатковою смугою
 function derive(pk,df,db){const key=pk+'|'+df+'|'+db;if(!PRESETS[key])PRESETS[key]={...PRESETS[pk],f:PRESETS[pk].f+df,b:PRESETS[pk].b+db,n:PRESETS[pk].n+' +',cat:undefined};return key}
@@ -80,7 +90,7 @@ function tryMerge(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||(
  const r=best.r,cuts=[];for(const q of [smp[best.bi],smp[best.bj]]){const nn=nearestOn(r.pts,q);if(dist(nn,r.pts[0])>15&&dist(nn,r.pts[r.pts.length-1])>15)cuts.push(nn)}
  let target=r;if(cuts.length){const pcs=splitRoad(r,cuts),mid=smp[(best.bi+best.bj)>>1];target=pcs.reduce((a,b)=>{const mm=p=>{const l=mkLane(p.pts);return dist(at(l,l.len/2),mid)};return mm(b)<mm(a)?b:a})}
  target.pk=derive(target.pk,best.df,best.db);target.sh=(target.sh||0)+best.sh;buildGraph();toast('Додано смугу до існуючої дороги');return true}
-function addRoad(pts,pk,lv,sp,nm){let c=sp?smoothPath(pts):pts.map(p=>({...p}));if(!nm&&(autoRamp(c,pk,lv)||tryMerge(c,pk,lv)||autoLevelRamp(c,pk,lv)))return; // пріоритет: з'їзд/заїзд (кінець на тілі дороги) → смуга поруч → рампа між рівнями
+function addRoad(pts,pk,lv,sp,nm){let c=cleanPath(sp?smoothPath(cleanPath(pts)):pts.map(p=>({...p})));if(c.length<2||mkLane(c).len<8)return; // ігноруємо вироджені/надто короткі накресленняif(!nm&&(autoRamp(c,pk,lv,sp)||tryMerge(c,pk,lv)||autoLevelRamp(c,pk,lv)))return; // пріоритет: з'їзд/заїзд (кінець на тілі дороги) → смуга поруч → рампа між рівнями
  for(const k of [0,c.length-1]){const e=c[k];let hit=false;const same=S.roads.filter(r=>r.level===lv);
   for(const r of same){for(const q of [r.pts[0],r.pts[r.pts.length-1]])if(dist(e,q)<30){c[k]={x:q.x,y:q.y};hit=true;break}if(hit)break}
   if(!hit)for(const r of same){const n=nearestOn(r.pts,e);if(n.d<roadW(PRESETS[r.pk])/2+14){c[k]={x:n.x,y:n.y};splitRoad(r,[n]);break}}}
@@ -107,7 +117,8 @@ function shouldSignal(nd){const A=nd.arms;if(A.length<3)return false;let appr=0,
 /** Чи перетинаються (або майже зливаються) траєкторії двох з'єднань у вузлі. */
 function pathsCross(a,b){for(let i=0;i<a.pts.length-1;i++)for(let j=0;j<b.pts.length-1;j++)if(segInt(a.pts[i],a.pts[i+1],b.pts[j],b.pts[j+1]))return true;
  for(const p of a.pts)for(const q of b.pts)if(Math.hypot(p.x-q.x,p.y-q.y)<14)return true;return false}
-function buildGraph(){const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==undefined&&e===r.attEnd?r.from:r.level};S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t1=0);
+function buildGraph(){S.roads=S.roads.filter(r=>r.pts&&r.pts.length>1&&r.pts.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y))); // відкидаємо биті дороги замість краху
+ const eLv=(ri,e)=>{const r=S.roads[ri];return r.from!==undefined&&e===r.attEnd?r.from:r.level};S.lanes=[];S.cars=[];S.obst=[];S.roads.forEach(r=>r.t0=r.t1=0);
  const eps=[];S.roads.forEach((r,i)=>[0,1].forEach(e=>{if((r.ramp==='exit'||r.ramp==='entry')&&e===(r.ramp==='exit'?0:1))return;eps.push({r:i,e,p:e?r.pts[r.pts.length-1]:r.pts[0]})}));
  // Вузли: кластеризація кінців доріг одного рівня через сітку (замість O(n²))
  const nodes=[],grid=new Map(),CELL=28;
@@ -310,7 +321,7 @@ function drawRoadLevel(lv){const R=S.roads.filter(r=>r.level===lv&&roadVisible(r
  for(const r of R){const p=PRESETS[r.pk];strokePath(r.dp,carW(p),p.col);if(p.cul){const q=w2s(r.dp[r.dp.length-1]);ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(q.x,q.y,carW(p)*.9*S.cam.z,0,7);ctx.fill()}}
  for(const n of S.nodes||[])if(n.lv===lv)drawJunction(n);
  for(const l of S.lanes)if(l.conn&&lvOf(l)===lv){const p=PRESETS[roadOf(l).pk];strokePath(l.pts,p.lw,p.col)}
- for(const r of R)deco(r,PRESETS[r.pk]);
+ for(const r of R){try{deco(r,PRESETS[r.pk])}catch(e){console.error('deco',e)}} // одна «погана» дорога не блокує малювання решти
  ctx.fillStyle='rgba(255,255,255,.85)';
  for(const l of S.lanes)if(!l.conn&&lvOf(l)===lv)for(let s=Math.max(40,l.len*.5);s<l.len-40;s+=90){const p=at(l,s),q=w2s(p);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(p.a);ctx.scale(S.cam.z,S.cam.z);
   ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.fill();ctx.restore()}}
@@ -341,7 +352,11 @@ const toolbar=$('presets'),catBar=$('cats');let curCat=CATS[0];
 function renderPresets(){toolbar.innerHTML='';for(const k in PRESETS){const p=PRESETS[k];if(p.cat!==curCat)continue;const b=document.createElement('button');b.className='pre'+(k===S.preset?' on':'');b.textContent=p.n;
  b.onclick=()=>{S.preset=k;if(p.lv!==undefined)$('level').value=p.lv;renderPresets()};toolbar.appendChild(b)}}
 CATS.forEach(c=>{const b=document.createElement('button');b.className='btn';b.textContent=c;b.onclick=()=>{curCat=c;renderPresets()};catBar.appendChild(b)});renderPresets();
-function finish(){if(S.pts.length>1){const sp=$('mode').value==='spline',lv=+$('level').value,pr=PRESETS[S.preset];
+/** Скасування: знімок доріг перед кожною дією (до 50 кроків). Дорожні об'єкти копіюються неглибоко — масиви точок ніколи не змінюються «на місці». */
+const UNDO=[];
+function pushUndo(){UNDO.push(S.roads.map(r=>({...r})));if(UNDO.length>50)UNDO.shift()}
+function undo(){const s=UNDO.pop();if(!s){toast('Нічого скасовувати');return}S.roads=s;S.pts=[];buildGraph();toast('Скасовано')}
+function finish(){if(S.pts.length>1){pushUndo();const sp=$('mode').value==='spline',lv=+$('level').value,pr=PRESETS[S.preset];
   addRoad(S.pts.slice(),S.preset,lv,sp);
   if($('par').checked){const W=roadW(pr)+24;addRoad(offsetLine(S.pts,W),S.preset,lv,sp,true)}}
  S.pts=[]}
@@ -353,11 +368,14 @@ cv.addEventListener('mousedown',e=>{S.dirty=1;if(e.button===2){drag={x:e.clientX
 cv.addEventListener('mousemove',e=>{S.dirty=1;if(drag){S.cam.x=drag.cx-(e.clientX-drag.x)/S.cam.z;S.cam.y=drag.cy-(e.clientY-drag.y)/S.cam.z}
  const p=s2w(e.clientX,e.clientY);S.mouseRaw=p;S.mouse={x:Math.round(p.x/40)*40,y:Math.round(p.y/40)*40}});
 addEventListener('mouseup',()=>drag=null);cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('dblclick',()=>{S.pts.pop();finish()});
+cv.addEventListener('dblclick',()=>{S.pts.pop();safeFinish()});
 cv.addEventListener('wheel',e=>{S.dirty=1;S.cam.z=Math.max(.3,Math.min(3,S.cam.z*(e.deltaY<0?1.1:.9)))});
-addEventListener('keydown',e=>{S.dirty=1;if(e.key==='Enter')finish();if(e.key==='Escape')S.pts=[]});
+addEventListener('keydown',e=>{S.dirty=1;if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'){e.preventDefault();undo();return}if(e.key==='Enter')safeFinish();if(e.key==='Escape')S.pts=[]});
 $('sim').onclick=()=>{S.run=!S.run;$('sim').textContent=S.run?'⏸ Трафік':'▶ Трафік'};
-$('clr').onclick=()=>{S.roads=[];S.pts=[];buildGraph()};
+$('clr').onclick=()=>{pushUndo();S.roads=[];S.pts=[];buildGraph()};
+/** Побудова з автоматичним відкатом при помилці (щоб жодна дія не залишала мережу напівзламаною). */
+function safeFinish(){try{finish()}catch(err){console.error(err);S.pts=[];undo();toast('Не вдалося побудувати цю дорогу — зміни скасовано')}}
+$('undo').onclick=undo;
  
 /* ===== js/ramps.js ===== */
 'use strict';
@@ -376,13 +394,13 @@ function findRampTarget(c,lv,first){const e=first?c[0]:c[c.length-1],nx=first?c[
   for(const side of [1,-1]){if(side>0?!po.f:!po.b)continue;const hc=side>0?h0:h0+Math.PI,turn=first?wrapA(hd-hc):wrapA(hc-hd);
    if(turn>.04&&turn<1.25&&(!best||turn<best.turn))best={r,n,po,side,h0,hc,turn}}}
  return best}
-function autoRamp(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||c.length<2)return false;
+function autoRamp(c,pk,lv,sp){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||c.length<2)return false;
  for(const first of [true,false]){const t=findRampTarget(c,lv,first);if(!t)continue;
   const{r,n,po,side,h0,hc}=t,off=(side>0?laneOff(po,0,po.f-1):laneOff(po,1,po.b-1))+(r.sh||0),att={x:n.x-Math.sin(h0)*off,y:n.y+Math.cos(h0)*off};
   const lead={x:att.x+Math.cos(hc)*(first?30:-30),y:att.y+Math.sin(hc)*(first?30:-30)}; // короткий відрізок уздовж траси → плавне відгалуження
   let pts=c.map(p=>({...p}));if(first){pts.shift();while(pts.length>1&&dist(pts[0],att)<60)pts.shift();pts=[att,lead,...pts]}
   else{pts.pop();while(pts.length>1&&dist(pts[pts.length-1],att)<60)pts.pop();pts=[...pts,lead,att]}
-  splitRoad(r,[n]);S.roads.push({pts:smoothPath(pts),pk,level:lv,ramp:first?'exit':'entry'});buildGraph();toast(first?"З'їзд створено":'Заїзд створено');return true}
+  splitRoad(r,[n]);S.roads.push({pts:cleanPath(smoothPath(cleanPath(pts),sp?1:3)),pk,level:lv,ramp:first?'exit':'entry'}) /* без подвійного згладжування: спліновий шлях уже гладкий */;buildGraph();toast(first?"З'їзд створено":'Заїзд створено');return true}
  return false}
 /** Дорога іншого рівня, що торкається кінця існуючої, стає рампою зі схилом (висота інтерполюється у 3D). */
 function autoLevelRamp(c,pk,lv){for(const k of [0,c.length-1]){const e=c[k];
