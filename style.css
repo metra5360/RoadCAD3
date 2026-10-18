@@ -4,3 +4,11 @@ canvas#c2d,#c3d{position:absolute;inset:0;width:100%;height:100%}
 .btn:hover{background:#6366f1}
 .pre{background:#374151;padding:.35rem .6rem;border-radius:.375rem;font-size:.8rem;border:2px solid transparent}
 .pre.on{border-color:#818cf8;background:#4338ca}
+/* Запасні стилі: сторінка працює навіть якщо Tailwind із CDN не завантажився */
+.hidden{display:none!important}
+body{background:#111827;color:#f3f4f6;font-family:system-ui,sans-serif;height:100vh;width:100vw;overflow:hidden}
+canvas#c2d{z-index:0}#c3d{z-index:1}
+#bar{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:center;padding:.5rem;background:rgba(31,41,55,.95);border-top:1px solid #374151;z-index:5}
+#hint{position:absolute;top:.5rem;left:.5rem;z-index:5;font-size:.75rem;background:rgba(31,41,55,.8);border-radius:.25rem;padding:.25rem .5rem}
+#bar select{background:#374151;color:#f3f4f6;border-radius:.375rem;padding:.25rem .5rem;font-size:.875rem}
+ 
