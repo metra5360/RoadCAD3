@@ -1,4 +1,3 @@
-
 /* ===== js/catalog.js ===== */
 'use strict';
 /* КАТАЛОГ ДОРІГ: пресети (смуги, ширина, швидкість, оздоблення) і похідні розміри.
@@ -16,7 +15,7 @@ C('🌉 Мости й тунелі',[['Автомобільний міст',BR],
 const carW=p=>Math.max((p.f+p.b)*p.lw+p.med,p.w||0),sideW=p=>(p.bus?p.lw:0)+(p.bike?12:0)+(p.park?16:0)+p.sw,roadW=p=>carW(p)+2*sideW(p);
 const laneW=p=>(p.f+p.b)*p.lw+p.med,laneOff=(p,rev,i)=>rev?-laneW(p)/2+p.b*p.lw-(i+.5)*p.lw:-laneW(p)/2+p.b*p.lw+p.med+(i+.5)*p.lw;
 const BRC={susp:'#dc2626',cable:'#f59e0b',arch:'#6b7280',bascule:'#7c3aed',lift:'#0ea5e9',rail:'#78350f'};
- 
+
 /* ===== js/core.js ===== */
 'use strict';
 /* ЯДРО: стан застосунку (S), камера, геометрія (сплайни, зсув лінії, смуга як полілінія з довжинами). */
@@ -225,7 +224,7 @@ function buildGraph(){const oldCars=S.cars,oldObst=S.obst;S.roads=S.roads.filter
    Оптимізація: авто індексуються по смугах (відсортовані за s) → пошук лідера O(log n), загалом O(n log n) замість O(n²). */
 const SIM={nid:0,dt:1/60,spawnP:.04,perLane:6,maxCars:900,rev:-1,arev:-1,active:[],spawnLanes:[]};
 const roadOf=l=>S.roads[l.road];
- 
+
 /** Перебудова індексу: lane.cars (за зростанням s) + аварії як нерухомі «авто-перешкоди».
     Чіпаємо лише «активні» смуги (де є авто) — вартість не залежить від загальної кількості смуг. */
 function indexCars(){
@@ -235,7 +234,7 @@ function indexCars(){
  for(const c of S.cars)put(c.lane,c);
  for(const o of S.obst)put(o.lane,{s:o.s,v:0,obst:true,lane:o.lane});
  for(const l of SIM.active)if(l.cars.length>1)l.cars.sort((a,b)=>a.s-b.s);}
- 
+
 /** Перше авто попереду позиції s на смузі (бінарний пошук), пропускаючи self. */
 function firstAhead(lane,s,self){const a=lane.cars;let lo=0,hi=a.length;
  while(lo<hi){const m=(lo+hi)>>1;if(a[m].s<=s)lo=m+1;else hi=m}
@@ -244,7 +243,7 @@ const lastBehind=(lane,s)=>{const a=lane.cars;let lo=0,hi=a.length;while(lo<hi){
 const bumper=o=>o.obst?20:26;
 function gapAhead(lane,s,self){const o=firstAhead(lane,s,self);return o?{o,gap:o.s-s-bumper(o)}:{o:null,gap:1e9}}
 const pickNext=lane=>lane.next.length?lane.next[(Math.random()*lane.next.length)|0]:null;
- 
+
 /** Лідер для авто: у власній смузі, інакше на наступній (2 кроки уперед). Маршрут обирається один раз і зберігається. */
 function leaderCars(c){const lane=c.lane,a=gapAhead(lane,c.s,c);if(a.o||!lane.next.length)return a;
  const nx=routeFor(c);if(!nx)return a;
@@ -252,7 +251,7 @@ function leaderCars(c){const lane=c.lane,a=gapAhead(lane,c.s,c);if(a.o||!lane.ne
  if(f)return{o:f,gap:rest+f.s-bumper(f)};
  if(nx.next.length===1){const f2=nx.next[0].cars[0];if(f2)return{o:f2,gap:rest+nx.len+f2.s-bumper(f2)}}
  return a}
- 
+
 /** Маршрут через перехрестя: «ціль» (планується при в'їзді на дорогу) → запасний варіант, якщо ціль недосяжна з поточної смуги. */
 function routeFor(c){const l=c.lane;if(c.route&&l.next.includes(c.route))return c.route;if(c.alt&&l.next.includes(c.alt))return c.alt;return c.alt=pickNext(l)}
 /** Чи вже хтось із сусідніх смуг перестроюється в цю смугу поруч із нами (резерв). */
@@ -294,14 +293,14 @@ function coneStop(c){if(c.cw>180||c.lane.conn)return null;const D=16+Math.min(c.
 /** Лідер = найближча з перешкод: авто в смузі / світлофор / авто на перетині траєкторій. */
 function leader(c){let r=leaderCars(c);if(c.want){const g=gapAhead(c.want,c.s*c.want.len/c.lane.len,null);if(g.gap<r.gap)r=g} // під час перестроювання рахуємо й лідера цільової смуги
  const g=signalStop(c);if(g&&g.gap<r.gap)r=g;const k=coneStop(c);if(k&&k.gap<r.gap)r={o:k.o,gap:k.gap,cone:true};return r}
- 
- 
+
+
 function spawnCars(){
  if(SIM.rev!==S.rev){SIM.spawnLanes=S.lanes.filter(l=>!l.conn&&!l.hasIn);SIM.rev=S.rev}
  const sp=SIM.spawnLanes;if(!sp.length||Math.random()>=SIM.spawnP||S.cars.length>=Math.min(SIM.maxCars,S.lanes.length*SIM.perLane))return;
  const l=sp[(Math.random()*sp.length)|0];if(l.cars[0]&&l.cars[0].s<40)return;
  const p=at(l,5);S.cars.push({lane:l,s:5,v:0,lat:0,col:`hsl(${Math.random()*360|0},60%,55%)`,vm:.8+Math.random()*.3,want:null,route:null,x:p.x,y:p.y,a:p.a,id:++SIM.nid,cw:0,lvl:roadOf(l).level});planGoal(S.cars[S.cars.length-1])}
- 
+
 /** Перестроювання: обганяємо повільного лідера, якщо в сусідній смузі є вільне місце попереду й позаду. */
 function tryLaneChange(c,L){
  for(const nb of c.lane.nb){if(laneTaken(nb,c))continue;
@@ -316,7 +315,7 @@ function advanceLaneChange(c,dt){const nb=c.want,lw=PRESETS[roadOf(c.lane).pk].l
 /** Перехід на наступну смугу (до 4 коротких з'єднань за крок); немає продовження → авто зникає. */
 function advanceLane(c){let g=0;while(c.s>=c.lane.len&&g++<4){const n=routeFor(c);
  if(!n){c.dead=true;return}c.s-=c.lane.len;if(c.lane.conn)c.lane.occ--;if(c.res&&c.res!==n)c.res.occ--;if(n.conn&&c.res!==n)n.occ=(n.occ||0)+1;c.res=null;c.lane=n;c.lvl=roadOf(n).level;c.lat=0;c.want=null;planGoal(c)}}
- 
+
 function updateCar(c,dt){
  c.stall=c.v<.01?(c.stall||0)+1:0;if(c.stall>1800&&signalHold(c)===null){if(c.lane.conn)c.lane.occ--;if(c.res)c.res.occ--;c.dead=true;return} // анти-затор (взаємне блокування коротких ділянок)
  const pr=PRESETS[roadOf(c.lane).pk],vmax=pr.v*c.vm,L=leader(c),dv=L.o?c.v-L.o.v:0;
@@ -333,7 +332,7 @@ function updateCar(c,dt){
  c.s+=ds;if(c.s>=c.lane.len)advanceLane(c);if(c.dead)return;
  const p=at(c.lane,c.s);c.x=p.x+Math.sin(p.a)*c.lat;c.y=p.y-Math.cos(p.a)*c.lat;
  c.a+=(((p.a-c.a+Math.PI*3)%(Math.PI*2))-Math.PI)*.25}
- 
+
 /** Найближча звичайна смуга до точки (x,y) того ж рівня, з урахуванням напрямку a (якщо задано). */
 function matchLane(lanes,x,y,a,lvl,maxD=18){let best=null,bd=maxD;
  for(const l of lanes){const b=l.bb;if(x<b.x0-bd||x>b.x1+bd||y<b.y0-bd||y>b.y1+bd||roadOf(l).level!==lvl)continue;const nn=nearestOn(l.pts,{x,y});if(nn.d>=bd)continue;
@@ -346,7 +345,7 @@ function restoreTraffic(cars,obst){if(!(cars&&cars.length)&&!(obst&&obst.length)
  for(const o of obst||[]){if(o.x==null)continue;const m=matchLane(lanes,o.x,o.y,null,o.lvl||0);if(m)S.obst.push({lane:m.l,s:m.s,x:o.x,y:o.y,lvl:o.lvl})}}
 /** Один фіксований крок симуляції. Мертві авто видаляються на місці (без нових масивів → менше GC). */
 function step(dt){indexCars();hashCars();updateSignals(dt);spawnCars();const cs=S.cars;let w=0;for(let i=0;i<cs.length;i++){const c=cs[i];updateCar(c,dt);if(!c.dead)cs[w++]=c}cs.length=w}
- 
+
 /* ===== js/render2d.js ===== */
 'use strict';
 /* 2D-РЕНДЕРЕР. Дороги кешуються в офскрін-шари (по рівнях) і перемальовуються лише при зміні мережі/камери;
@@ -362,7 +361,7 @@ function deco(r,p){const P=r.tp,E=carW(p)/2,mc=-laneW(p)/2+p.b*p.lw+p.med/2;let 
  if(p.med){strokeOff(P,mc,p.med,p.green?'#3f7f3f':p.tram?'#555':'#6b7280');if(p.tram)[-4,4].forEach(d=>strokeOff(P,mc+d,1.5,'#d1d5db'));if(p.barrier)[1,-1].forEach(s=>strokeOff(P,mc+s*(p.med/2+1),3,'#e5e7eb'))}
  if(p.noise)[1,-1].forEach(s=>strokeOff(P,s*(E+3),4,'#38bdf8'));
  if(p.paved){const L0=-laneW(p)/2+p.b*p.lw;for(let i=1;i<p.f;i++)strokeOff(P,L0+p.med+i*p.lw,2,'#e5e7eb',[14,14]);for(let i=1;i<p.b;i++)strokeOff(P,L0-i*p.lw,2,'#e5e7eb',[14,14]);if(p.b&&p.f&&!p.med)strokeOff(P,L0,2,'#facc15')}}
- 
+
 const LAYERS={},DR={rev:-1,lv:new Set()};
 const lvOf=l=>S.roads[l.road].level;
 /** Чи потрапляє дорога (bbox + запас на ширину) у видиму область. */
@@ -417,7 +416,7 @@ function draw(){ctx=mainCtx;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#14532d
  if(DR.rev!==S.rev){DR.lv=new Set(S.roads.map(r=>r.level));DR.rev=S.rev}
  for(const lv of [-1,0,1]){if(!DR.lv.has(lv))continue;ctx.globalAlpha=lv<0?.45:1;ctx.drawImage(renderLayer(lv).c,0,0);drawObstacles(lv);drawCars(lv);drawSignals(lv);ctx.globalAlpha=1}
  drawOverlay()}
- 
+
 /* ===== js/marks.js ===== */
 'use strict';
 /* РОЗМІТКА. Каталог видів (лінії + «штампи»), малювання на полотні, розміщення з прив'язкою до смуг і гумка.
@@ -501,7 +500,7 @@ function markAt(p,live){const t=MK[S.mk.key],o=S.mk,m={k:t.key,len:o.len,w:o.w,g
  m.x=x;m.y=y;m.a=a;return m}
 function eraseMarkAt(p){let best=-1,bd=26;S.marks.forEach((m,i)=>{let d;if(m.pts){d=1e9;for(let k=0;k<m.pts.length-1;k++){const a=m.pts[k],b=m.pts[k+1],dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));d=Math.min(d,Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t))}}else d=Math.hypot(p.x-m.x,p.y-m.y)-(m.len||0)*.3;if(d<bd){bd=d;best=i}});
  if(best<0)return false;S.marks.splice(best,1);S.rev++;S.dirty=1;return true}
- 
+
 /* ===== js/ramps.js ===== */
 'use strict';
 /* З'ЇЗДИ / ЗАЇЗДИ БЕЗ НАЛАШТУВАНЬ. Просто малюйте односторонню дорогу:
@@ -534,7 +533,7 @@ function autoLevelRamp(c,pk,lv){for(const k of [0,c.length-1]){const e=c[k];
    for(const q of [r.pts[0],r.pts[r.pts.length-1]])if(dist(e,q)<30){const pts=c.map(p=>({...p}));pts[k]={x:q.x,y:q.y};
     S.roads.push({pts,pk,level:lv,ramp:'level',sh:r.sh||0,from:r.level,attEnd:k?1:0,ys:k?[lv*30,r.level*30]:[r.level*30,lv*30]});buildGraph();toast('Рампу між рівнями створено');return true}}}
  return false}
- 
+
 /* ===== js/save.js ===== */
 'use strict';
 /* ЗБЕРЕЖЕННЯ: файл JSON (завантаження/відкриття) + автозбереження в браузері (localStorage). */
@@ -554,7 +553,7 @@ function restoreAuto(){try{const t=localStorage.getItem(SAVE_KEY);if(t)deseriali
 function saveFile(){const d=new Date(),p=n=>String(n).padStart(2,'0'),name=`roadcad-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(serialize())],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('Збережено: '+name)}
 function loadFile(file){const rd=new FileReader();rd.onload=()=>{try{pushUndo();const r=deserialize(JSON.parse(rd.result));toast(`Відкрито: ${r.roads} доріг, ${r.marks} розміток`)}catch(e){undo();toast('Не вдалося відкрити файл: '+e.message)}};rd.readAsText(file)}
- 
+
 /* ===== js/ui.js ===== */
 'use strict';
 /* ІНТЕРФЕЙС (у стилі Cities: Skylines): вгорі — типи; клік по типу відкриває панель підтипів; ліворуч — інструменти.
@@ -649,7 +648,7 @@ $('clr').onclick=()=>{pushUndo();S.roads=[];S.marks=[];S.pts=[];S.mkpts=[];S.obs
 $('save').onclick=saveFile;$('load').onclick=()=>$('file').click();$('file').onchange=e=>{const f=e.target.files[0];if(f)loadFile(f);e.target.value=''};
 // ---------- старт
 buildCats();selectPreset('p0');renderMkPar();restoreAuto();if(S.roads.length||S.marks.length)toast('Відновлено автозбереження');else openSub(CATS[0]);syncUI();
- 
+
 /* ===== js/main.js ===== */
 'use strict';
 /* ГОЛОВНИЙ ЦИКЛ: фіксований крок симуляції (60 Гц, акумулятор) — однакова поведінка на будь-якому FPS.
