@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="uk" data-v="20261019-103318"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RoadCAD Lanes</title>
 <style id="css">/*CSS-START*/
 :root{--bg:#0f1520;--panel:rgba(24,30,42,.94);--panel2:#273043;--acc:#4f7cff;--acc2:#2b4fb3;--tx:#e8edf7;--mut:#8b97ad}
@@ -42,7 +42,8 @@ button.on,.seg button.on,.card.on{background:var(--acc2);border-color:var(--acc)
 #hint{position:absolute;left:12px;bottom:10px;max-width:calc(100vw - 24px);z-index:5;font-size:12px;color:var(--mut);background:rgba(15,21,32,.8);border-radius:8px;padding:5px 9px}
  
 /*CSS-END*/</style>
-<script>addEventListener("error",function(e){var t=e.target;if(t&&t.src&&/app\.js/.test(t.src)){document.body.insertAdjacentHTML("afterbegin","<pre style=\"position:fixed;top:0;left:0;right:0;z-index:99;margin:0;padding:10px;background:#7f1d1d;color:#fff;font:13px monospace\">Не знайдено app.js — покладіть його в одну папку з index.html (або відкрийте RoadCAD-single.html).</pre>")}},true)</script>
+<script>(function(){function box(t){var d=document.getElementById("errbox");if(!d){d=document.createElement("pre");d.id="errbox";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99;margin:0;padding:10px;background:#7f1d1d;color:#fff;font:13px/1.4 monospace;white-space:pre-wrap";(document.body||document.documentElement).appendChild(d)}d.textContent+=t+"\n"}
+addEventListener("error",function(e){var t=e.target;if(t&&t.src)box("Не вдалося завантажити "+t.src.split("/").pop()+" — покладіть його в одну папку з index.html (або відкрийте RoadCAD-single.html).");else box("Помилка скрипта: "+e.message)},true);window.__box=box})()</script>
 </head>
 <body>
 <canvas id="c2d"></canvas>
@@ -77,4 +78,5 @@ button.on,.seg button.on,.card.on{background:var(--acc2);border-color:var(--acc)
 <div id="hint">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · ПКМ+тягнути — панорама · колесо — масштаб · Alt+клік — аварія · Ctrl+Z — скасувати · [ ] — кут розмітки</div>
 <input type="file" id="file" accept="application/json,.json" hidden>
 <script src="app.js"></script>
+<script>if(window.APP_VERSION!==document.documentElement.getAttribute("data-v"))__box("Файли різних версій: app.js ("+(window.APP_VERSION||"старий")+") не відповідає index.html ("+document.documentElement.getAttribute("data-v")+"). Замініть app.js файлом із тієї ж збірки й натисніть Ctrl+F5.")</script>
 </body></html>
