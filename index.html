@@ -1,19 +1,38 @@
 <!DOCTYPE html>
 <html lang="uk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RoadCAD Lanes</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>addEventListener('error',e=>{let d=document.getElementById('err');if(!d){d=document.createElement('pre');d.id='err';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99;background:#7f1d1d;color:#fff;padding:8px;font:12px monospace;white-space:pre-wrap';document.body.appendChild(d)}d.textContent+=(e.message||'НЕ ЗАВАНТАЖИВСЯ ФАЙЛ: '+(e.target&&(e.target.src||e.target.href))+' — покладіть його поруч з index.html')+(e.lineno?' (рядок '+e.lineno+')':'')+'\n'},true);</script>
 <link rel="stylesheet" href="style.css"></head>
-<body style="background:#111827;color:#f3f4f6" class="bg-gray-900 text-gray-100 h-screen w-screen overflow-hidden">
-<canvas id="c2d"></canvas><div id="c3d" class="hidden"></div>
-<div id="hint" class="absolute top-2 left-2 text-xs bg-gray-800/80 rounded px-2 py-1">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · Alt+клік — аварія · ПКМ+тягнути — панорама · колесо — масштаб · односторонка від траси/до траси = з'їзд/заїзд (автоматично)</div>
-<div id="bar" class="absolute bottom-0 inset-x-0 bg-gray-800/95 border-t border-gray-700 p-2 flex flex-wrap gap-2 items-center justify-center">
-  <div id="cats" class="flex gap-1 w-full justify-center"></div><div id="presets" class="flex gap-1 flex-wrap justify-center max-h-24 overflow-y-auto"></div>
-  <select id="mode" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="line">Пряма</option><option value="spline">Крива</option></select>
-  <select id="level" class="bg-gray-700 rounded px-2 py-1 text-sm"><option value="0">Земля</option><option value="1">Міст</option><option value="-1">Тунель</option></select>
-  <label class="text-sm"><input type="checkbox" id="par"> Паралельно</label>
-  <label class="text-sm" title="Односторонка поруч з дорогою стає її новою смугою"><input type="checkbox" id="mrg" checked> Додавати смугу</label>
-  <button id="sim" class="btn">▶ Трафік</button><button id="v3" class="btn">3D</button><button id="undo" class="btn" title="Ctrl+Z">↶ Скасувати</button><button id="clr" class="btn">Очистити</button>
-</div>
-<script src="app.js"></script></body></html>
+<body>
+<canvas id="c2d"></canvas>
+<header id="top">
+  <div id="brand">🛣️ RoadCAD</div>
+  <nav id="cats"></nav>
+  <div id="acts">
+    <button id="sim" title="Пуск / пауза трафіку">▶ Трафік</button>
+    <button id="undo" title="Скасувати (Ctrl+Z)">↶</button>
+    <button id="save" title="Зберегти у файл">💾</button>
+    <button id="load" title="Відкрити файл">📂</button>
+    <button id="clr" title="Очистити все (можна скасувати)">🗑️</button>
+  </div>
+</header>
+<section id="sub" class="hidden"><div id="subtitle"></div><div id="subbody"></div></section>
+<aside id="tools">
+  <div class="grp" id="g-road">
+    <div class="row"><label>Режим</label><div class="seg" id="s-mode"><button data-v="line" title="Пряма">╱</button><button data-v="spline" title="Крива">⌒</button></div></div>
+    <div class="row"><label>Висота</label><div class="seg" id="s-level"><button data-v="-1" title="Тунель">⤓</button><button data-v="0" title="Земля">▬</button><button data-v="1" title="Міст">⤒</button></div></div>
+    <div class="row"><label>Паралельно</label><button class="sw" id="t-par"></button></div>
+    <div class="row"><label>Додавати смугу</label><button class="sw" id="t-mrg"></button></div>
+  </div>
+  <div class="grp" id="g-snap">
+    <div class="row"><label>Сітка 40</label><button class="sw" id="t-grid"></button></div>
+    <div class="row"><label>Прив'язка до смуг</label><button class="sw" id="t-snap"></button></div>
+  </div>
+  <div class="grp hidden" id="g-mark">
+    <div id="mk-name"></div><div id="mk-par"></div>
+    <div class="row"><button id="mk-erase" class="wide">🧽 Гумка розмітки</button></div>
+  </div>
+</aside>
+<div id="hint">ЛКМ — точка · Enter/дубл.клік — завершити · Esc — скасувати · ПКМ+тягнути — панорама · колесо — масштаб · Alt+клік — аварія · Ctrl+Z — скасувати · [ ] — кут розмітки</div>
+<input type="file" id="file" accept="application/json,.json" hidden>
+<script src="app.js"></script>
+</body></html>
