@@ -1,3 +1,4 @@
+
 /* ===== js/catalog.js ===== */
 'use strict';
 /* КАТАЛОГ ДОРІГ: пресети (смуги, ширина, швидкість, оздоблення) і похідні розміри.
@@ -6,7 +7,7 @@
 const CATS=[],PRESETS={};
 const B={f:1,b:1,lw:30,v:1.8,col:'#3b3f46',med:0,sw:0,paved:1};
 function C(cat,L){CATS.push(cat);for(const[n,o]of L)PRESETS['p'+Object.keys(PRESETS).length]={n,cat,...B,...o}}
-const M={f:2,b:2,v:2.2},L6={f:3,b:3,v:2.6},H={col:'#2f3237',v:3.2,barrier:1},BR={f:2,b:2,v:2.2,lv:1,sw:6};
+const M={f:2,b:2,v:2.2},L6={f:3,b:3,v:2.6},H={col:'#3b3f46',v:3.2,barrier:1},BR={f:2,b:2,v:2.2,lv:1,sw:6};
 C('🏘️ Малі',[['Двосмугова двостороння',{}],['Двосмугова одностороння',{f:2,b:0}],['Односмугова одностороння',{f:1,b:0}],['Односмугова вузька',{f:1,b:0,lw:24}],['Односмугова з тротуарами',{f:1,b:0,sw:10}],['Вузька житлова',{lw:24}],['Житлова з тротуарами',{sw:10}],['Житлова з деревами',{sw:12,tree:1}],['Житлова з паркуванням',{sw:10,park:1}],['Житлова з узбіччям',{sw:8,swc:'#9a8b6a'}],['Ґрунтова',{lw:26,v:1.1,col:'#7a5c3a',paved:0}],['Гравійна',{lw:26,v:1.4,col:'#9a9486',paved:0}],['Тупик (cul-de-sac)',{cul:1,sw:8}],['Під паркування',{park:1}],['Мала на мосту',{lv:1,sw:6}],['Мала з трамваєм',{med:18,tram:1}]]);
 C('🏙️ Середні',[['4 смуги двостороння',M],['4 смуги одностороння',{...M,f:4,b:0}],['4 смуги з розділювачем',{...M,med:14}],['4 смуги з деревами',{...M,sw:12,tree:1}],['З велосмугами',{...M,bike:1,sw:6}],['З автобусними смугами',{...M,bus:1,sw:6}],['З трамвайними коліями',{...M,med:20,tram:1}],['Автобусні + трамвай',{...M,bus:1,med:20,tram:1}],['Широкі тротуари',{...M,sw:26}],['З паркувальними смугами',{...M,park:1,sw:8}],['Центральна зелена смуга',{...M,med:18,green:1}],['Середня на мосту',{...M,lv:1,sw:6}],['Два рівні проїзної частини',{...M,lv:1,br:'cover',sw:6}]]);
 C('🌆 Великі',[['6 смуг двостороння',L6],['6 смуг одностороння',{...L6,f:6,b:0}],['6 смуг з розділювачем',{...L6,med:14}],['6 смуг з деревами',{...L6,sw:12,tree:1}],['З велосмугами',{...L6,bike:1,sw:6}],['З автобусними смугами',{...L6,bus:1,sw:6}],['З трамвайними коліями',{...L6,med:20,tram:1}],['Проспект з широкими тротуарами',{...L6,sw:30,tree:1}],['Центральна зелена смуга',{...L6,med:22,green:1}],['Велика на мосту',{...L6,lv:1,sw:6}]]);
@@ -19,7 +20,7 @@ const BRC={susp:'#dc2626',cable:'#f59e0b',arch:'#6b7280',bascule:'#7c3aed',lift:
 /* ===== js/core.js ===== */
 'use strict';
 /* ЯДРО: стан застосунку (S), камера, геометрія (сплайни, зсув лінії, смуга як полілінія з довжинами). */
-const S={rev:0,dirty:1,roads:[],lanes:[],cars:[],pts:[],preset:'p0',run:false,cam:{x:0,y:0,z:1},mouse:{x:0,y:0},obst:[]};
+const S={rev:0,dirty:1,nodes:[],opt:{mode:'line',level:0,par:false,mrg:true,grid:true,snap:true},marks:[],roads:[],lanes:[],cars:[],pts:[],preset:'p0',run:false,cam:{x:0,y:0,z:1},mouse:{x:0,y:0},obst:[]};
 const cv=document.getElementById('c2d'),mainCtx=cv.getContext('2d');
 let ctx=mainCtx; // тимчасово підміняється під час рендеру кешованих шарів
 const $=id=>document.getElementById(id);
@@ -80,11 +81,15 @@ function trimPoly(P,a,b){const L=mkLane(P);
 const rightN=h=>({x:-Math.sin(h),y:Math.cos(h)});
 /** Торець дороги ei: його точка та напрямок полілінії біля нього. */
 function endInfo(r,ei){const P=r.pts,k=P.length,q=ei?P[k-1]:P[0],a=ei?P[k-2]:P[1];return{q,h:ei?Math.atan2(q.y-a.y,q.x-a.x):Math.atan2(a.y-q.y,a.x-q.x)}}
-/** Бічне зміщення нової дороги (відносно центру блоку смуг), що ПОГОДЖУЄ її краї з межами смуг цілі: вузька дорога сідає рівно на смугу, а не на вісь. */
-function laneSnap(po,pn,lat){const Wn=(pn.f+pn.b)*pn.lw+pn.med,Hw=laneW(po)/2;if(Wn>=laneW(po)-1)return 0;const bs=new Set();
- for(let i=0;i<po.f;i++){const c=laneOff(po,0,i);bs.add(+(c-po.lw/2).toFixed(2));bs.add(+(c+po.lw/2).toFixed(2))}
- for(let i=0;i<po.b;i++){const c=laneOff(po,1,i);bs.add(+(c-po.lw/2).toFixed(2));bs.add(+(c+po.lw/2).toFixed(2))}
- let best=0,bd=1e9;for(const b of bs)for(const p of [b+Wn/2,b-Wn/2]){if(Math.abs(p)+Wn/2>Hw+.5)continue;const d=Math.abs(p-lat);if(d<bd){bd=d;best=p}}return best}
+/** Межі смуг відносно осі блоку: краї кожної смуги (і край блоку). */
+function laneBounds(p){const s=new Set();for(let i=0;i<p.f;i++){const c=laneOff(p,0,i);s.add(+(c-p.lw/2).toFixed(2));s.add(+(c+p.lw/2).toFixed(2))}
+ for(let i=0;i<p.b;i++){const c=laneOff(p,1,i);s.add(+(c-p.lw/2).toFixed(2));s.add(+(c+p.lw/2).toFixed(2))}
+ if(!s.size){s.add(-carW(p)/2);s.add(carW(p)/2)}return[...s].sort((a,b)=>a-b)}
+/** Бічне зміщення нової дороги відносно цілі, при якому лінії її смуг збігаються з лініями смуг цілі (смуга в смугу).
+    Вужча дорога лежить усередині ширшої, ширша — накриває вужчу; серед варіантів беремо найближчий до курсора. */
+function laneSnap(po,pn,lat){const Wt=laneW(po)||carW(po),Wn=laneW(pn)||carW(pn),bt=laneBounds(po),bn=laneBounds(pn);let best=0,bd=1e9;
+ for(const t of bt)for(const q of bn){const p=t-q;if(!(Wn<=Wt+1?Math.abs(p)+Wn/2<=Wt/2+.5:Math.abs(p)+Wt/2<=Wn/2+.5))continue;const d=Math.abs(p-lat);if(d<bd){bd=d;best=p}}
+ return best}
 /** Чи лежить точка e на торці якоїсь дороги (по поздовжньому ≤30, по ширині в межах дороги)? Повертає прив'язану до смуг точку + позицію вузла. */
 function endSnap(e,pk,lv){const pn=PRESETS[pk];let best=null;
  for(const r of S.roads){if(r.level!==lv||r.ramp==='level')continue;const po=PRESETS[r.pk];if(po.f+po.b<1||po.w)continue;
@@ -96,7 +101,7 @@ function endSnap(e,pk,lv){const pn=PRESETS[pk];let best=null;
 // Додавання дороги з АВТО-перехрестями: прилипання кінців, Т‑розгалуження, перетини X
 // Авто-об'єднання: нова односторонка поруч з дорогою стає її додатковою смугою
 function derive(pk,df,db){const key=pk+'|'+df+'|'+db;if(!PRESETS[key])PRESETS[key]={...PRESETS[pk],f:PRESETS[pk].f+df,b:PRESETS[pk].b+db,n:PRESETS[pk].n+' +',cat:undefined};return key}
-function tryMerge(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||($('mrg')&&$('mrg').checked===false))return false;
+function tryMerge(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||S.opt.mrg===false)return false;
  const L=mkLane(c);if(L.len<40)return false;const smp=[];for(let t=0;t<L.len;t+=20)smp.push(at(L,t));smp.push(at(L,L.len));
  const hn=pn.f*pn.lw/2;let best=null;
  for(const r of S.roads){if(r.level!==lv||r.ramp)continue;const po=PRESETS[r.pk];if(po.f+po.b<1||po.w||po.f+po.b+pn.f>10)continue;
@@ -112,7 +117,25 @@ function tryMerge(c,pk,lv){const pn=PRESETS[pk];if(pn.f<1||pn.b||pn.w||pn.med||(
  const r=best.r,cuts=[];for(const q of [smp[best.bi],smp[best.bj]]){const nn=nearestOn(r.pts,q);if(dist(nn,r.pts[0])>15&&dist(nn,r.pts[r.pts.length-1])>15)cuts.push(nn)}
  let target=r;if(cuts.length){const pcs=splitRoad(r,cuts),mid=smp[(best.bi+best.bj)>>1];target=pcs.reduce((a,b)=>{const mm=p=>{const l=mkLane(p.pts);return dist(at(l,l.len/2),mid)};return mm(b)<mm(a)?b:a})}
  target.pk=derive(target.pk,best.df,best.db);target.sh=(target.sh||0)+best.sh;buildGraph();toast('Додано смугу до існуючої дороги');return true}
-function addRoad(pts,pk,lv,sp,nm){let c=cleanPath(sp?smoothPath(cleanPath(pts)):pts.map(p=>({...p})));if(c.length<2||mkLane(c).len<8)return; // ігноруємо вироджені/надто короткі накреслення
+/** Дорога, що вже існує в цьому місці (≤8 од. від осі й паралельна). */
+function coverOf(q,lv){let best=null,bd=8;for(const r of S.roads){if(r.level!==lv||r.ramp==='level')continue;const b=r.bb||(r.bb=bboxOf(r.pts));if(q.x<b.x0-8||q.x>b.x1+8||q.y<b.y0-8||q.y>b.y1+8)continue;
+  const nn=nearestOn(r.pts,q);if(nn.d>=bd)continue;const h=Math.atan2(r.pts[nn.i+1].y-r.pts[nn.i].y,r.pts[nn.i+1].x-r.pts[nn.i].x),d=Math.abs(Math.atan2(Math.sin(q.a-h),Math.cos(q.a-h)));if(d<.5||d>Math.PI-.5){bd=nn.d;best=r}}return best}
+/** Повторне малювання «на тому самому місці» НІКОЛИ не дублює дорогу: збіг з існуючою дорогою пропускається (той самий тип)
+    або оновлює її тип; непокриті ділянки будуються як завжди. Короткий збіг на початку/кінці (з'їзд від осі) не рахується. */
+function coverReduce(c,pk,lv){const L=mkLane(c);if(L.len<24)return false;const n=Math.max(3,Math.ceil(L.len/10)),cov=[];
+ for(let k=0;k<=n;k++)cov.push(coverOf(at(L,L.len*k/n),lv));if(!cov.some(x=>x))return false;
+ const runs=[];for(let k=0;k<=n;k++){const r=cov[k],l=runs[runs.length-1];if(l&&l.r===r)l.e=k;else runs.push({r,s:k,e:k})}
+ const len=u=>(u.e-u.s)*L.len/n,big=u=>u.r&&len(u)>=20&&(len(u)>=60||len(u)>=.6*L.len||(u.s>0&&u.e<n));
+ if(!runs.some(big))return false;
+ const sub=(s0,s1)=>{const o=[at(L,s0)];for(let i=1;i<L.cum.length-1;i++)if(L.cum[i]>s0+.5&&L.cum[i]<s1-.5)o.push(L.pts[i]);o.push(at(L,s1));return cleanPath(o.map(p=>({x:p.x,y:p.y})))};
+ const todo=[],upg=[];for(const u of runs){const s0=L.len*u.s/n,s1=L.len*u.e/n;if(big(u)){if(u.r.pk!==pk&&!u.r.ramp&&!u.r.sh)upg.push(sub(s0,s1))}else if(len(u)>=20)todo.push(sub(s0,s1))}
+ for(const seg of upg){const mid=seg[seg.length>>1],r=coverOf({...mid,a:at(L,0).a},lv);if(!r||r.pk===pk)continue;const cuts=[];
+  for(const q of[seg[0],seg[seg.length-1]]){const nn=nearestOn(r.pts,q);if(dist(nn,r.pts[0])>15&&dist(nn,r.pts[r.pts.length-1])>15)cuts.push(nn)}
+  let t=r;if(cuts.length){const pcs=splitRoad(r,cuts);t=pcs.reduce((a,b)=>{const m=p=>{const l=mkLane(p.pts);return dist(at(l,l.len/2),mid)};return m(b)<m(a)?b:a})}t.pk=pk}
+ if(upg.length)buildGraph();
+ for(const p of todo)addRoad(p,pk,lv,false,true,true);return true}
+function addRoad(pts,pk,lv,sp,nm,ov){let c=cleanPath(sp?smoothPath(cleanPath(pts)):pts.map(p=>({...p})));if(c.length<2||mkLane(c).len<8)return; // ігноруємо вироджені/надто короткі накреслення
+ if(!ov&&coverReduce(c,pk,lv))return;
  if(!nm&&(autoRamp(c,pk,lv,sp)||tryMerge(c,pk,lv)||autoLevelRamp(c,pk,lv)))return; // пріоритет: з'їзд/заїзд (кінець на тілі дороги) → смуга поруч → рампа між рівнями
  let lk0=null,lk1=null;
  for(const k of [0,c.length-1]){const e=c[k],sn=endSnap(e,pk,lv);
@@ -152,8 +175,10 @@ function buildGraph(){const oldCars=S.cars,oldObst=S.obst;S.roads=S.roads.filter
   for(let dx=-1;dx<=1&&!n;dx++)for(let dy=-1;dy<=1&&!n;dy++){const b=grid.get(lvq+':'+(gx+dx)+':'+(gy+dy));if(b)n=b.find(m=>dist(m.c,q.cp)<14)||null}
   if(!n){n={lv:lvq,c:{x:q.cp.x,y:q.cp.y},m:[]};nodes.push(n);const k=lvq+':'+gx+':'+gy;(grid.get(k)||grid.set(k,[]).get(k)).push(n)}n.m.push(q)}
  S.nodes=nodes.filter(n=>n.m.length>1);
- for(const n of S.nodes){const ws=n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])/2);n.mw=Math.max(...ws)*2;n.T=4;
-  n.m.forEach((q,i)=>{const T=n.m.length>2?Math.max(...ws.filter((_,j)=>j!==i))+22:4;S.roads[q.r]['t'+q.e]=T;if(T>n.T)n.T=T})} // відступ рукава = півширина найширшої ІНШОЇ дороги + запас на заокруглення
+ for(const n of S.nodes){const ws=n.m.map(q=>roadW(PRESETS[S.roads[q.r].pk])/2),dirs=n.m.map(q=>{const{h}=endInfo(S.roads[q.r],q.e);return q.e?h+Math.PI:h});n.mw=Math.max(...ws)*2;n.T=4;
+  // відступ рукава = скільки потрібно, щоб звільнити гирло сусідніх доріг: півширина/sin(кута) + запас на заокруглення; протилежне плече тієї ж лінії не враховується
+  n.m.forEach((q,i)=>{let T=4;n.m.forEach((_,j)=>{if(j===i)return;const g=Math.abs(Math.atan2(Math.sin(dirs[i]-dirs[j]),Math.cos(dirs[i]-dirs[j])));if(g>Math.PI-.35)return;T=Math.max(T,Math.min(240,ws[j]/Math.max(Math.sin(g),.3)+22))});
+   S.roads[q.r]['t'+q.e]=T;if(T>n.T)n.T=T})}
  S.roads.forEach((r,ri)=>{const pr=PRESETS[r.pk],m=pr.med/2;r.dp=r.sh?offsetLine(r.pts,r.sh):r.pts;r.tp=trimPoly(r.dp,r.t0,r.t1);
   const mk=(d,rev,idx)=>{const Q=offsetLine(r.tp,d);if(rev)Q.reverse();const l=mkLane(Q);Object.assign(l,{road:ri,dir:rev?-1:1,idx,nl:rev?pr.b:pr.f,next:[],nb:[]});S.lanes.push(l)};
   for(let i=0;i<pr.f;i++)mk(laneOff(pr,0,i),0,i);for(let i=0;i<pr.b;i++)mk(laneOff(pr,1,i),1,i)});
@@ -164,11 +189,17 @@ function buildGraph(){const oldCars=S.cars,oldObst=S.obst;S.roads=S.roads.filter
  // З'єднання смуг на вузлах: беремо кандидатів із хешу кінців/початків, а не всі пари смуг
  const endH=new SpatialHash(128),startH=new SpatialHash(128);for(const l of S.lanes){endH.add(l.pts[l.pts.length-1],l);startH.add(l.pts[0],l)}
  for(const n of S.nodes){const R=n.mw/2+40,As=endH.query(n.c,R),Bs=startH.query(n.c,R);
+  // Прямі з'єднання «смуга в смугу»: кожна смуга з'єднується з найближчою за бічним зсувом (і навпаки), а не за номером смуги
+  const mnA=new Map(),mnB=new Map(),spr=[],str=new Map();
+  for(const a of As){if(eLv(a.road,a.dir>0?1:0)!==n.lv||dist(a.pts[a.pts.length-1],n.c)>R)continue;const ea=a.pts[a.pts.length-1],ha=at(a,a.len).a;
+   for(const b of Bs){if(b.road===a.road||eLv(b.road,b.dir>0?0:1)!==n.lv||dist(b.pts[0],n.c)>R||Math.abs(wrap(at(b,0).a-ha))>=.5)continue;
+    const lat=Math.abs((b.pts[0].x-ea.x)*-Math.sin(ha)+(b.pts[0].y-ea.y)*Math.cos(ha));spr.push([a,b,lat]);if(!(mnA.get(a)<=lat))mnA.set(a,lat);if(!(mnB.get(b)<=lat))mnB.set(b,lat)}}
+  for(const[a,b,lat]of spr){const lw=Math.max(PRESETS[roadOf(a).pk].lw,PRESETS[roadOf(b).pk].lw);if(lat<=lw*1.6&&(lat<=mnA.get(a)+.5||lat<=mnB.get(b)+.5))(str.get(a)||str.set(a,new Set()).get(a)).add(b)}
   for(const a of As){if(eLv(a.road,a.dir>0?1:0)!==n.lv||dist(a.pts[a.pts.length-1],n.c)>R)continue;
    const ai=n.arms.findIndex(m=>m.r===a.road&&(a.dir>0?m.e===1:m.e===0));if(n.sig&&ai>=0&&!a.sig){a.sig={n,arm:ai};n.sigLanes.push(a)} // стоп-лінія світлофора
    for(const b of Bs){if(b.road===a.road||eLv(b.road,b.dir>0?0:1)!==n.lv||dist(b.pts[0],n.c)>R)continue;
     const turn=wrap(at(b,0).a-at(a,a.len).a),ab=Math.abs(turn);if(ab>2.1)continue;
-    const ok=ab<.5?b.idx===Math.min(a.idx,b.nl-1):turn>0?(a.idx===a.nl-1&&b.idx===b.nl-1):(a.idx===0&&b.idx===0);if(!ok)continue;
+    const ok=ab<.5?!!(str.get(a)&&str.get(a).has(b)):turn>0?(a.idx===a.nl-1&&b.idx===b.nl-1):(a.idx===0&&b.idx===0);if(!ok)continue;
     const p0=a.pts[a.pts.length-1],p1=b.pts[0],ct=ab<.5?{x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2}:n.c,Q=[];
     for(let k=0;k<=10;k++){const t=k/10,u=1-t;Q.push({x:u*u*p0.x+2*u*t*ct.x+t*t*p1.x,y:u*u*p0.y+2*u*t*ct.y+t*t*p1.y})}
     const l=mkLane(Q);Object.assign(l,{road:a.road,dir:0,idx:0,conn:true,turn,src:a,dst:b,occ:0,next:[b],nb:[]});conns.push(l);n.conns.push(l);a.next.push(l);b.hasIn=true}}}
@@ -359,7 +390,8 @@ function drawRoadLevel(lv){const R=S.roads.filter(r=>r.level===lv&&roadVisible(r
  for(const r of R){try{deco(r,PRESETS[r.pk])}catch(e){console.error('deco',e)}} // одна «погана» дорога не блокує малювання решти
  ctx.fillStyle='rgba(255,255,255,.85)';
  for(const l of S.lanes)if(!l.conn&&lvOf(l)===lv)for(let s=Math.max(40,l.len*.5);s<l.len-40;s+=90){const p=at(l,s),q=w2s(p);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(p.a);ctx.scale(S.cam.z,S.cam.z);
-  ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.fill();ctx.restore()}}
+  ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.fill();ctx.restore()}
+ drawMarks(lv)}
 /** Повертає актуальний шар рівня; перемальовує тільки якщо змінились мережа (S.rev), камера або розмір вікна. */
 function renderLayer(lv){let L=LAYERS[lv];if(!L){const c=document.createElement('canvas');L=LAYERS[lv]={c,x:c.getContext('2d'),rev:-1,key:''}}
  if(L.c.width!==cv.width||L.c.height!==cv.height){L.c.width=cv.width;L.c.height=cv.height;L.rev=-1}
@@ -373,47 +405,102 @@ function drawCars(lv){const z=S.cam.z,w=cv.width,h=cv.height;
   ctx.fillStyle='#111';ctx.fillRect(3,-5,5,10);if(c.v<.05){ctx.fillStyle='#f00';ctx.fillRect(-13,-5,2,10)}}
  ctx.setTransform(1,0,0,1,0,0)}
 /** Попередній перегляд: перший/останній вузол прив'язується до смуг на торцях доріг (як при побудові). */
-function previewPath(){const P=[...S.pts,S.mouse].map(p=>({x:p.x,y:p.y})),pk=S.preset,lv=+$('level').value;
+function previewPath(){const P=[...S.pts,S.mouse].map(p=>({x:p.x,y:p.y})),pk=S.preset,lv=S.opt.level;
  for(const i of [0,P.length-1]){const sn=endSnap(P[i],pk,lv);if(sn)P[i]=sn.pt}return P}
-function drawOverlay(){
- if(S.pts.length){const P=previewPath();strokePath($('mode').value==='spline'?smoothPath(P):P,roadW(PRESETS[S.preset]),'rgba(129,140,248,.5)')}}
+/** Привид розмітки під курсором і розмітка, що малюється. */
+function drawMarkOverlay(){if(S.tool==='mark'){const t=MK[S.mk.key];
+  if(t.kind==='stamp'){if(S.mouseRaw)drawMark(markAt(S.mouseRaw),.65)}
+  else if(S.mkpts.length){const m=markAt(S.mkpts[0]);m.pts=[...S.mkpts,S.mkMouse||S.mkpts[S.mkpts.length-1]];drawMark(m,.8)}}}
+function drawOverlay(){drawMarkOverlay();
+ if(S.pts.length){const P=previewPath();strokePath(S.opt.mode==='spline'?smoothPath(P):P,roadW(PRESETS[S.preset]),'rgba(129,140,248,.5)')}}
 function draw(){ctx=mainCtx;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#14532d';ctx.fillRect(0,0,cv.width,cv.height);
  if(DR.rev!==S.rev){DR.lv=new Set(S.roads.map(r=>r.level));DR.rev=S.rev}
  for(const lv of [-1,0,1]){if(!DR.lv.has(lv))continue;ctx.globalAlpha=lv<0?.45:1;ctx.drawImage(renderLayer(lv).c,0,0);drawObstacles(lv);drawCars(lv);drawSignals(lv);ctx.globalAlpha=1}
  drawOverlay()}
  
-/* ===== js/ui.js ===== */
+/* ===== js/marks.js ===== */
 'use strict';
-/* ІНТЕРФЕЙС: панель пресетів, режими, миша/клавіатура. */
-// ===== Введення
-const toolbar=$('presets'),catBar=$('cats');let curCat=CATS[0];
-function renderPresets(){toolbar.innerHTML='';for(const k in PRESETS){const p=PRESETS[k];if(p.cat!==curCat)continue;const b=document.createElement('button');b.className='pre'+(k===S.preset?' on':'');b.textContent=p.n;
- b.onclick=()=>{S.preset=k;if(p.lv!==undefined)$('level').value=p.lv;renderPresets()};toolbar.appendChild(b)}}
-CATS.forEach(c=>{const b=document.createElement('button');b.className='btn';b.textContent=c;b.onclick=()=>{curCat=c;renderPresets()};catBar.appendChild(b)});renderPresets();
-/** Скасування: знімок доріг перед кожною дією (до 50 кроків). Дорожні об'єкти копіюються неглибоко — масиви точок ніколи не змінюються «на місці». */
-const UNDO=[];
-function pushUndo(){UNDO.push(S.roads.map(r=>({...r})));if(UNDO.length>50)UNDO.shift()}
-function undo(){const s=UNDO.pop();if(!s){toast('Нічого скасовувати');return}S.roads=s;S.pts=[];buildGraph();toast('Скасовано')}
-function finish(){if(S.pts.length>1){pushUndo();const sp=$('mode').value==='spline',lv=+$('level').value,pr=PRESETS[S.preset];
-  addRoad(S.pts.slice(),S.preset,lv,sp);
-  if($('par').checked){const W=roadW(pr)+24;addRoad(offsetLine(S.pts,W),S.preset,lv,sp,true)}}
- S.pts=[]}
-let drag=null;
-cv.addEventListener('mousedown',e=>{S.dirty=1;if(e.button===2){drag={x:e.clientX,y:e.clientY,cx:S.cam.x,cy:S.cam.y};return}
- const p=s2w(e.clientX,e.clientY);
- if(e.altKey){let best=null,bd=40;for(const l of S.lanes)for(let s=0;s<l.len;s+=10){const q=at(l,s),d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd){bd=d;best={lane:l,s}}}if(best){const q=at(best.lane,best.s);best.x=q.x;best.y=q.y;best.lvl=lvOf(best.lane);S.obst.push(best)}return}
- const g=40;S.pts.push({x:Math.round(p.x/g)*g,y:Math.round(p.y/g)*g})});
-cv.addEventListener('mousemove',e=>{S.dirty=1;if(drag){S.cam.x=drag.cx-(e.clientX-drag.x)/S.cam.z;S.cam.y=drag.cy-(e.clientY-drag.y)/S.cam.z}
- const p=s2w(e.clientX,e.clientY);S.mouseRaw=p;S.mouse={x:Math.round(p.x/40)*40,y:Math.round(p.y/40)*40}});
-addEventListener('mouseup',()=>drag=null);cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('dblclick',()=>{S.pts.pop();safeFinish()});
-cv.addEventListener('wheel',e=>{S.dirty=1;S.cam.z=Math.max(.3,Math.min(3,S.cam.z*(e.deltaY<0?1.1:.9)))});
-addEventListener('keydown',e=>{S.dirty=1;if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'){e.preventDefault();undo();return}if(e.key==='Enter')safeFinish();if(e.key==='Escape')S.pts=[]});
-$('sim').onclick=()=>{S.run=!S.run;$('sim').textContent=S.run?'⏸ Трафік':'▶ Трафік'};
-$('clr').onclick=()=>{pushUndo();S.roads=[];S.pts=[];S.obst=[];S.cars=[];buildGraph();toast('Все очищено · Ctrl+Z поверне назад')};
-/** Побудова з автоматичним відкатом при помилці (щоб жодна дія не залишала мережу напівзламаною). */
-function safeFinish(){try{finish()}catch(err){console.error(err);S.pts=[];undo();toast('Не вдалося побудувати цю дорогу — зміни скасовано')}}
-$('undo').onclick=undo;
+/* РОЗМІТКА. Каталог видів (лінії + «штампи»), малювання на полотні, розміщення з прив'язкою до смуг і гумка.
+   Лінія — ламана з кліків (Enter/подвійний клік — завершити). Штамп — один клік; кут (°), довжина, ширина, крок, колір задаються в панелі.
+   Локальні координати штампа: x — по ходу руху, y — вправо. */
+const MCOL={white:'#f5f5f5',yellow:'#facc15',red:'#dc2626',blue:'#2563eb',green:'#16a34a',black:'#111827'};
+const MCOLN={white:'Білий',yellow:'Жовтий',red:'Червоний',blue:'Синій',green:'Зелений',black:'Чорний'};
+const MPAR={len:'Довжина',w:'Ширина',gap:'Крок',ang:'Кут (°)',hang:'Кут штрихів (°)',col:'Колір',text:'Текст'};
+const MK={};
+const mc=m=>MCOL[m.col]||m.col||MCOL.white,dz=m=>[m.len*S.cam.z,m.gap*S.cam.z];
+// --- примітиви в локальних координатах штампа
+const Lx=(x1,y1,x2,y2,wd,c)=>{ctx.strokeStyle=c;ctx.lineWidth=wd;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()};
+const Rx=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h)};
+function head(x,y,a,s,c){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*s,y+Math.sin(a)*s);ctx.lineTo(x+Math.cos(a+2.5)*s*.85,y+Math.sin(a+2.5)*s*.85);ctx.lineTo(x+Math.cos(a-2.5)*s*.85,y+Math.sin(a-2.5)*s*.85);ctx.fill()}
+function txt(s,size,c){ctx.save();ctx.rotate(Math.PI/2);ctx.fillStyle=c;ctx.font=`bold ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s,0,0);ctx.restore()}
+function arrow(m,br){const L=m.len,c=mc(m),wd=m.w;Lx(-L/2,0,0,0,wd,c);
+ for(const b of br){const a=b*Math.PI/180,e=L*.5,ex=Math.cos(a)*e,ey=Math.sin(a)*e;Lx(0,0,ex*.8,ey*.8,wd,c);head(ex,ey,a,wd*2.6,c)}}
+function uturn(m){const r=m.len*.2,c=mc(m);Lx(-m.len/2,0,0,0,m.w,c);ctx.strokeStyle=c;ctx.lineWidth=m.w;ctx.beginPath();ctx.arc(0,-r,r,Math.PI/2,-Math.PI/2,true);ctx.stroke();head(0,-2*r,Math.PI,m.w*2.6,c)}
+function zigzag(P,step,amp){const L=mkLane(P),o=[];let i=0;for(let s=0;s<L.len;s+=step,i++){const p=at(L,s),f=i%2?amp:-amp;o.push({x:p.x-Math.sin(p.a)*f,y:p.y+Math.cos(p.a)*f})}o.push(P[P.length-1]);return o}
+function zebra(m,lines){const c=mc(m);for(let y=-m.len/2;y<m.len/2-1;y+=m.gap*2)Rx(-m.w/2,y,m.w,Math.min(m.gap,m.len/2-y),c);if(lines){Rx(-m.w/2-2,-m.len/2,2,m.len,c);Rx(m.w/2,-m.len/2,2,m.len,c)}}
+function hatchRect(m,both){ctx.save();ctx.beginPath();ctx.rect(-m.len/2,-m.w/2,m.len,m.w);ctx.clip();const c=mc(m),t=Math.tan((m.hang||45)*Math.PI/180),R=m.len+m.w;
+ for(const sg of both?[1,-1]:[1])for(let x=-R;x<R;x+=m.gap)Lx(x-sg*m.w/2/(t||1e-3),-sg*m.w/2,x+sg*m.w/2/(t||1e-3),sg*m.w/2,2,c);ctx.restore();ctx.strokeStyle=c;ctx.lineWidth=2;ctx.strokeRect(-m.len/2,-m.w/2,m.len,m.w)}
+function def(key,n,kind,group,d,par,draw,snap){MK[key]={key,n,kind,group,def:d,par,draw,snap:snap||'lane'}}
+const LP=['w','len','gap','col'];
+// ----- ЛІНІЇ
+def('l_solid','Суцільна','line','Лінії',{w:3,col:'white'},['w','col'],m=>strokePath(m.pts,m.w,mc(m)));
+def('l_dash','Переривчаста','line','Лінії',{w:3,len:14,gap:14,col:'white'},LP,m=>strokePath(m.pts,m.w,mc(m),dz(m)));
+def('l_long','Попереджувальна (довгий штрих)','line','Лінії',{w:3,len:30,gap:10,col:'white'},LP,m=>strokePath(m.pts,m.w,mc(m),dz(m)));
+def('l_dot','Крапкова (напрямна)','line','Лінії',{w:3,len:3,gap:6,col:'white'},LP,m=>strokePath(m.pts,m.w,mc(m),dz(m)));
+def('l_dsolid','Подвійна суцільна','line','Лінії',{w:2.5,gap:3,col:'yellow'},['w','gap','col'],m=>{const o=m.w/2+m.gap/2;strokeOff(m.pts,o,m.w,mc(m));strokeOff(m.pts,-o,m.w,mc(m))});
+def('l_sd','Суцільна + переривчаста','line','Лінії',{w:2.5,len:14,gap:14,col:'white'},LP,m=>{const o=m.w+1.5;strokeOff(m.pts,-o,m.w,mc(m));strokeOff(m.pts,o,m.w,mc(m),dz(m))});
+def('l_dd','Подвійна переривчаста (реверсивна)','line','Лінії',{w:2.5,len:14,gap:14,col:'yellow'},LP,m=>{const o=m.w+1.5;strokeOff(m.pts,-o,m.w,mc(m),dz(m));strokeOff(m.pts,o,m.w,mc(m),dz(m))});
+def('l_edge','Краєва (суцільна жирна)','line','Лінії',{w:5,col:'white'},['w','col'],m=>strokePath(m.pts,m.w,mc(m)));
+def('l_zig','Зигзаг (зупинка заборонена)','line','Лінії',{w:3,len:10,gap:6,col:'yellow'},LP,m=>strokePath(zigzag(m.pts,m.len,m.gap),m.w,mc(m)));
+def('l_park','Паркувальна (жовта)','line','Лінії',{w:2.5,len:10,gap:8,col:'yellow'},LP,m=>strokePath(m.pts,m.w,mc(m),dz(m)));
+def('l_stripe','Кольорова смуга (автобус/вело)','line','Лінії',{w:24,col:'red'},['w','col'],m=>{ctx.globalAlpha*=.6;strokePath(m.pts,m.w,mc(m))});
+def('l_curb','Бордюр (смугастий)','line','Лінії',{w:6,len:8,gap:8,col:'white'},LP,m=>{strokePath(m.pts,m.w,MCOL.black);strokePath(m.pts,m.w,mc(m),dz(m))});
+// ----- СТРІЛКИ
+const AP=['len','w','ang','col'],AD={len:34,w:4,col:'white'};
+for(const[k,n,br]of[['a_str','Прямо',[0]],['a_left','Ліворуч',[-48]],['a_right','Праворуч',[48]],['a_sl','Прямо + ліворуч',[0,-48]],['a_sr','Прямо + праворуч',[0,48]],['a_lr','Ліворуч + праворуч',[-48,48]],['a_ml','Злиття ліворуч',[-22]],['a_mr','Злиття праворуч',[22]]])def(k,n,'stamp','Стрілки',AD,AP,m=>arrow(m,br));
+def('a_u','Розворот','stamp','Стрілки',AD,AP,uturn);
+// ----- ПЕРЕХОДИ
+const CP=['len','w','gap','ang','col'];
+def('c_zebra','Зебра','stamp','Переходи',{len:80,w:26,gap:6,col:'white'},CP,m=>zebra(m,false),'road');
+def('c_ladder','Драбинка','stamp','Переходи',{len:80,w:26,gap:6,col:'white'},CP,m=>zebra(m,true),'road');
+def('c_cont','Континентальний','stamp','Переходи',{len:80,w:30,gap:10,col:'white'},CP,m=>zebra(m,false),'road');
+def('c_lines','Пішохідний (дві лінії)','stamp','Переходи',{len:80,w:26,col:'white'},['len','w','ang','col'],m=>{Rx(-m.w/2-3,-m.len/2,3,m.len,mc(m));Rx(m.w/2,-m.len/2,3,m.len,mc(m))},'road');
+// ----- СИМВОЛИ ТА ДІЛЯНКИ
+def('s_stop','Стоп-лінія','stamp','Символи й ділянки',{len:30,w:6,col:'white'},['len','w','ang','col'],m=>Rx(-m.w/2,-m.len/2,m.w,m.len,mc(m)));
+def('s_yield','Лінія «Дай дорогу»','stamp','Символи й ділянки',{len:30,w:9,gap:10,col:'white'},CP,m=>{ctx.fillStyle=mc(m);for(let y=-m.len/2;y<m.len/2-m.gap/2;y+=m.gap){ctx.beginPath();ctx.moveTo(m.w/2,y);ctx.lineTo(m.w/2,y+m.gap*.9);ctx.lineTo(-m.w/2,y+m.gap*.45);ctx.fill()}});
+def('s_hatch','Штриховка (розділювальна)','stamp','Символи й ділянки',{len:80,w:30,gap:9,hang:45,col:'white'},['len','w','gap','hang','ang','col'],m=>hatchRect(m,false),'road');
+def('s_chev','Шеврони (острівець)','stamp','Символи й ділянки',{len:80,w:30,gap:14,col:'white'},CP,m=>{for(let x=-m.len/2;x<m.len/2;x+=m.gap){ctx.strokeStyle=mc(m);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,-m.w/2);ctx.lineTo(x+m.gap*.7,0);ctx.lineTo(x,m.w/2);ctx.stroke()}},'road');
+def('s_box','Жовта сітка (не блокувати)','stamp','Символи й ділянки',{len:60,w:60,gap:12,hang:45,col:'yellow'},['len','w','gap','hang','ang','col'],m=>hatchRect(m,true),'road');
+def('s_hump','Лежачий поліцейський','stamp','Символи й ділянки',{len:30,w:20,gap:5,col:'white'},CP,m=>{for(let x=-m.w/2;x<m.w/2;x+=m.gap*2)Rx(x,-m.len/2,m.gap,m.len,mc(m))});
+def('s_rumble','Шумові смуги','stamp','Символи й ділянки',{len:30,w:22,gap:7,col:'white'},CP,m=>{for(let x=-m.w/2;x<m.w/2;x+=m.gap)Rx(x,-m.len/2,2,m.len,mc(m))});
+def('s_bike','Велосипед','stamp','Символи й ділянки',{len:28,w:2.5,col:'white'},['len','w','ang','col'],m=>{const c=mc(m),r=m.len*.2;ctx.strokeStyle=c;ctx.lineWidth=m.w;for(const x of[-m.len*.25,m.len*.25]){ctx.beginPath();ctx.arc(x,0,r,0,7);ctx.stroke()}Lx(-m.len*.25,0,0,-r*.8,m.w,c);Lx(0,-r*.8,m.len*.25,0,m.w,c);Lx(-m.len*.25,0,m.len*.1,-r*1.4,m.w,c);Lx(m.len*.25,0,m.len*.2,-r*1.6,m.w,c)});
+def('s_bus','БУС (смуга автобуса)','stamp','Символи й ділянки',{len:20,text:'БУС',col:'white'},['len','ang','col'],m=>txt('БУС',m.len,mc(m)));
+def('s_dis','Місце для інвалідів','stamp','Символи й ділянки',{len:22,text:'♿',col:'blue'},['len','ang','col'],m=>txt('♿',m.len,mc(m)));
+def('s_park','Паркомісце','stamp','Символи й ділянки',{len:50,w:26,col:'white'},['len','w','ang','col'],m=>{ctx.strokeStyle=mc(m);ctx.lineWidth=2;ctx.strokeRect(-m.len/2,-m.w/2,m.len,m.w)});
+def('s_speed','Обмеження швидкості','stamp','Символи й ділянки',{len:34,w:3,text:'50',col:'red'},['len','w','text','ang','col'],m=>{ctx.strokeStyle=mc(m);ctx.lineWidth=m.w;ctx.beginPath();ctx.arc(0,0,m.len/2,0,7);ctx.stroke();txt(m.text,m.len*.5,MCOL.white)});
+def('s_text','Текст на дорозі','stamp','Символи й ділянки',{len:24,text:'СТОП',col:'white'},['len','text','ang','col'],m=>txt(m.text,m.len,mc(m)));
+/** Малює одну розмітку (alpha — для привида під курсором). */
+function drawMark(m,al){const t=MK[m.k];if(!t)return;const prev=ctx.globalAlpha;ctx.globalAlpha=prev*(al==null?1:al);
+ if(t.kind==='line'){if(m.pts&&m.pts.length>1)t.draw(m)}else{const q=w2s(m);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(m.a);ctx.scale(S.cam.z,S.cam.z);ctx.lineCap='butt';t.draw(m);ctx.restore()}
+ ctx.globalAlpha=prev}
+const drawMarks=lv=>{for(const m of S.marks)if((m.lv||0)===lv)drawMark(m)};
+// ----- Прив'язка до смуг
+/** Найближча смуга (центр смуги, її напрям руху). */
+function snapLane(p,maxD=45){let best=null,bd=maxD;for(const l of S.lanes){if(l.conn)continue;const b=l.bb||(l.bb=bboxOf(l.pts));if(p.x<b.x0-bd||p.x>b.x1+bd||p.y<b.y0-bd||p.y>b.y1+bd)continue;
+  const n=nearestOn(l.pts,p);if(n.d<bd){bd=n.d;best={x:n.x,y:n.y,a:Math.atan2(l.pts[n.i+1].y-l.pts[n.i].y,l.pts[n.i+1].x-l.pts[n.i].x),lv:roadOf(l).level,w:PRESETS[roadOf(l).pk].lw}}}return best}
+/** Найближча вісь блоку смуг дороги (для переходів, штриховки): точка по центру проїзної частини. */
+function snapRoad(p,maxD=70){let best=null,bd=maxD;for(const r of S.roads){const pr=PRESETS[r.pk];if(pr.f+pr.b<1&&!pr.w)continue;const P=r.dp||r.pts,b=r.bb||(r.bb=bboxOf(r.pts));if(p.x<b.x0-bd||p.x>b.x1+bd||p.y<b.y0-bd||p.y>b.y1+bd)continue;
+  const n=nearestOn(P,p);if(n.d<bd){bd=n.d;best={x:n.x,y:n.y,a:Math.atan2(P[n.i+1].y-P[n.i].y,P[n.i+1].x-P[n.i].x),lv:r.level,w:carW(pr)}}}return best}
+/** Точка на найближчій межі смуги (для ліній розмітки). */
+function snapBoundary(p,maxD=14){let best=null,bd=maxD;for(const r of S.roads){const pr=PRESETS[r.pk];if(pr.f+pr.b<1)continue;const P=r.dp||r.pts,b=r.bb||(r.bb=bboxOf(r.pts));if(p.x<b.x0-60||p.x>b.x1+60||p.y<b.y0-60||p.y>b.y1+60)continue;
+  for(const o of laneBounds(pr)){const n=nearestOn(offsetLine(P,o),p);if(n.d<bd){bd=n.d;best={x:n.x,y:n.y,lv:r.level}}}}return best}
+/** Розмітка, яку було б поставлено зараз (для привида й розміщення). */
+function markAt(p,live){const t=MK[S.mk.key],o=S.mk,m={k:t.key,len:o.len,w:o.w,gap:o.gap,col:o.col,hang:o.hang,text:o.text,lv:S.opt.level};
+ if(t.kind==='line')return m;let a=(o.ang||0)*Math.PI/180,x=p.x,y=p.y;
+ if(S.opt.snap){const s=t.snap==='road'?snapRoad(p):snapLane(p);if(s){x=s.x;y=s.y;a+=s.a;m.lv=s.lv}}
+ m.x=x;m.y=y;m.a=a;return m}
+function eraseMarkAt(p){let best=-1,bd=26;S.marks.forEach((m,i)=>{let d;if(m.pts){d=1e9;for(let k=0;k<m.pts.length-1;k++){const a=m.pts[k],b=m.pts[k+1],dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));d=Math.min(d,Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t))}}else d=Math.hypot(p.x-m.x,p.y-m.y)-(m.len||0)*.3;if(d<bd){bd=d;best=i}});
+ if(best<0)return false;S.marks.splice(best,1);S.rev++;S.dirty=1;return true}
  
 /* ===== js/ramps.js ===== */
 'use strict';
@@ -448,52 +535,131 @@ function autoLevelRamp(c,pk,lv){for(const k of [0,c.length-1]){const e=c[k];
     S.roads.push({pts,pk,level:lv,ramp:'level',sh:r.sh||0,from:r.level,attEnd:k?1:0,ys:k?[lv*30,r.level*30]:[r.level*30,lv*30]});buildGraph();toast('Рампу між рівнями створено');return true}}}
  return false}
  
-/* ===== js/render3d.js ===== */
+/* ===== js/save.js ===== */
 'use strict';
-/* 3D-ВИГЛЯД (Three.js). Дороги — статична група мешів (перебудова лише при зміні S.rev),
-   усі авто — ОДИН InstancedMesh (1 draw call). Матеріали кешуються; при виході з 3D усе звільняється (dispose) — без витоків GPU-пам'яті. */
-const T3={r:null,sc:null,cam:null,roads:null,cars:null,dummy:null,rev:-1,ang:0,mats:new Map()},MAX3D=1200;
-function mat3(col,tag){const k=col+(tag||'');let m=T3.mats.get(k);if(!m){m=new THREE.MeshStandardMaterial({color:col,side:THREE.DoubleSide});T3.mats.set(k,m)}return m}
-function disposeGroup(g){g.traverse(o=>{if(o.geometry)o.geometry.dispose()});T3.sc.remove(g)}
-/** Меші доріг: стрічка за точками (з похилом для рамп), пілони мостів, пілони/арки спеціальних мостів. */
-function buildRoads3D(){if(T3.roads)disposeGroup(T3.roads);const g=new THREE.Group();
- for(const rd of S.roads){const P=rd.dp||rd.pts,pr=PRESETS[rd.pk],W=roadW(pr),y0=rd.level*30+.5,v=[],id=[];
-  P.forEach((p,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1,nx=-dy/l*W/2,ny=dx/l*W/2;
-   const y=rd.ys?rd.ys[0]+(rd.ys[1]-rd.ys[0])*i/(P.length-1)+.5:y0;v.push(p.x+nx,y,p.y+ny,p.x-nx,y,p.y-ny);if(i)id.push(2*i-2,2*i-1,2*i,2*i-1,2*i+1,2*i)});
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));geo.setIndex(id);geo.computeVertexNormals();g.add(new THREE.Mesh(geo,mat3(pr.col)));
-  const m=P[P.length>>1];
-  if(pr.br==='susp'||pr.br==='cable'){const t=new THREE.Mesh(new THREE.BoxGeometry(8,120,W),mat3('#dc2626'));t.position.set(m.x,60,m.y);g.add(t)}
-  if(pr.br==='arch'){const a=new THREE.Mesh(new THREE.TorusGeometry(100,4,6,24,Math.PI),mat3('#6b7280'));a.position.set(m.x,rd.level*30,m.y);g.add(a)}
-  if(rd.level>0&&!rd.ys){const pil=new THREE.Mesh(new THREE.BoxGeometry(W,rd.level*30,8),mat3('#9ca3af'));pil.position.set(P[0].x,rd.level*15,P[0].y);g.add(pil)}}
- T3.roads=g;T3.sc.add(g);T3.rev=S.rev}
-function init3D(){if(T3.r)return;const el=$('c3d'),r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(devicePixelRatio||1,2));r.setSize(innerWidth,innerHeight);el.innerHTML='';el.appendChild(r.domElement);
- const sc=new THREE.Scene();sc.background=new THREE.Color(0x9ec5e8);sc.add(new THREE.HemisphereLight(0xffffff,0x335533,1));
- T3.r=r;T3.sc=sc;T3.cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,1,6000);
- const ground=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),mat3('#2e7d32','g'));ground.rotation.x=-Math.PI/2;sc.add(ground);
- T3.cars=new THREE.InstancedMesh(new THREE.BoxGeometry(24,8,12),new THREE.MeshStandardMaterial({color:0xffffff}),MAX3D);T3.cars.instanceMatrix.setUsage(THREE.DynamicDrawUsage);T3.cars.frustumCulled=false;
- T3.dummy=new THREE.Object3D();sc.add(T3.cars);buildRoads3D()}
-function dispose3D(){if(!T3.r)return;T3.sc.traverse(o=>{if(o.geometry)o.geometry.dispose()});T3.mats.forEach(m=>m.dispose());T3.mats.clear();
- T3.cars.material.dispose();T3.cars.dispose();T3.r.dispose();if(T3.r.forceContextLoss)T3.r.forceContextLoss();T3.r.domElement.remove();
- T3.r=T3.sc=T3.cam=T3.roads=T3.cars=null;T3.rev=-1}
-function draw3D(){if(!T3.r)return;if(T3.rev!==S.rev)buildRoads3D();
- const n=Math.min(S.cars.length,MAX3D),d=T3.dummy;
- for(let i=0;i<n;i++){const c=S.cars[i],rd=roadOf(c.lane),fr=c.lane.dir>0?c.s/c.lane.len:c.lane.dir<0?1-c.s/c.lane.len:null;
-  d.position.set(c.x,(rd.ys&&fr!==null?rd.ys[0]+(rd.ys[1]-rd.ys[0])*fr:rd.level*30)+5,c.y);d.rotation.y=-c.a;d.updateMatrix();
-  T3.cars.setMatrixAt(i,d.matrix);T3.cars.setColorAt(i,c.c3||(c.c3=new THREE.Color(c.col)))}
- T3.cars.count=n;T3.cars.instanceMatrix.needsUpdate=true;if(T3.cars.instanceColor)T3.cars.instanceColor.needsUpdate=true;
- T3.ang+=.003;const R=700;T3.cam.position.set(S.cam.x+Math.cos(T3.ang)*R,520,S.cam.y+Math.sin(T3.ang)*R);T3.cam.lookAt(S.cam.x,0,S.cam.y);T3.r.render(T3.sc,T3.cam)}
-addEventListener('resize',()=>{if(T3.r){T3.r.setSize(innerWidth,innerHeight);T3.cam.aspect=innerWidth/innerHeight;T3.cam.updateProjectionMatrix()}});
-$('v3').onclick=()=>{const hidden=$('c3d').classList.toggle('hidden');if(hidden){dispose3D();cv.style.visibility='visible';S.dirty=1}else{init3D();cv.style.visibility='hidden'}};
+/* ЗБЕРЕЖЕННЯ: файл JSON (завантаження/відкриття) + автозбереження в браузері (localStorage). */
+const SAVE_KEY='roadcad.autosave.v1',ROAD_KEYS=['pk','level','sh','l0','l1','ramp','from','attEnd','ys'];
+/** Відновлює похідні пресети («база|смуги вперед|смуги назад|…»), створені авто-додаванням смуг. */
+function ensurePreset(pk){if(PRESETS[pk])return true;const p=String(pk).split('|');if(p.length<3||!PRESETS[p[0]])return false;let cur=p[0];for(let i=1;i+1<p.length;i+=2)cur=derive(cur,+p[i],+p[i+1]);return !!PRESETS[pk]}
+const r2=v=>v,/* повна точність: однакова мережа після відкриття */ fin2=a=>Array.isArray(a)&&a.length>=2&&Number.isFinite(a[0])&&Number.isFinite(a[1]);
+function serialize(){return{v:1,app:'RoadCAD Lanes',roads:S.roads.map(r=>{const o={pts:r.pts.map(p=>[r2(p.x),r2(p.y)])};for(const k of ROAD_KEYS)if(r[k]!==undefined)o[k]=r[k];return o}),
+ marks:S.marks.map(m=>{const o={...m};if(m.pts)o.pts=m.pts.map(p=>[r2(p.x),r2(p.y)]);return o}),cam:{x:S.cam.x,y:S.cam.y,z:S.cam.z}}}
+/** Завантаження з перевіркою: биті/невідомі об'єкти пропускаються, а не ламають проєкт. */
+function deserialize(d){if(!d||!Array.isArray(d.roads))throw new Error('Невідомий формат файлу');const roads=[];
+ for(const o of d.roads){if(!Array.isArray(o.pts)||o.pts.length<2||!o.pts.every(fin2)||!ensurePreset(o.pk))continue;const r={pts:o.pts.map(([x,y])=>({x,y}))};for(const k of ROAD_KEYS)if(o[k]!==undefined)r[k]=o[k];if(r.level===undefined)r.level=0;roads.push(r)}
+ const marks=(d.marks||[]).filter(m=>MK[m.k]&&(m.pts?m.pts.every(fin2):Number.isFinite(m.x)&&Number.isFinite(m.y))).map(m=>{const o={...m};if(m.pts)o.pts=m.pts.map(([x,y])=>({x,y}));return o});
+ S.roads=roads;S.marks=marks;if(d.cam&&Number.isFinite(d.cam.x)&&Number.isFinite(d.cam.y)&&Number.isFinite(d.cam.z))Object.assign(S.cam,{x:d.cam.x,y:d.cam.y,z:d.cam.z});S.pts=[];S.obst=[];buildGraph();return{roads:roads.length,marks:marks.length}}
+function autosave(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(serialize()))}catch(e){}}
+function restoreAuto(){try{const t=localStorage.getItem(SAVE_KEY);if(t)deserialize(JSON.parse(t))}catch(e){console.warn('autosave',e)}}
+function saveFile(){const d=new Date(),p=n=>String(n).padStart(2,'0'),name=`roadcad-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(serialize())],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('Збережено: '+name)}
+function loadFile(file){const rd=new FileReader();rd.onload=()=>{try{pushUndo();const r=deserialize(JSON.parse(rd.result));toast(`Відкрито: ${r.roads} доріг, ${r.marks} розміток`)}catch(e){undo();toast('Не вдалося відкрити файл: '+e.message)}};rd.readAsText(file)}
+ 
+/* ===== js/ui.js ===== */
+'use strict';
+/* ІНТЕРФЕЙС (у стилі Cities: Skylines): вгорі — типи; клік по типу відкриває панель підтипів; ліворуч — інструменти.
+   Миша/клавіатура: будівництво доріг, розмітка (лінії/штампи), гумка, скасування, збереження. */
+const MARK_CAT='MARK';
+S.cat=CATS[0];S.tool='road';S.mkpts=[];S.mk={key:'l_solid',len:14,w:3,gap:14,col:'white',hang:45,text:'СТОП',ang:0};
+/** Скасування: знімок доріг і розмітки перед кожною дією (до 50 кроків). Об'єкти копіюються неглибоко — масиви точок ніколи не змінюються «на місці». */
+const UNDO=[];
+function pushUndo(){UNDO.push({roads:S.roads.map(r=>({...r})),marks:S.marks.map(m=>({...m}))});if(UNDO.length>50)UNDO.shift()}
+function undo(){const s=UNDO.pop();if(!s){toast('Нічого скасовувати');return}S.roads=s.roads;S.marks=s.marks;S.pts=[];S.mkpts=[];buildGraph();toast('Скасовано')}
+// ---------- попередній перегляд карток
+function swapDraw(cvs,z,fn){const c=cvs.getContext('2d'),oc=ctx,ocam=S.cam;ctx=c;S.cam={x:(cv.width/2-cvs.width/2)/z,y:(cv.height/2-cvs.height/2)/z,z};try{fn(c)}finally{ctx=oc;S.cam=ocam}}
+function previewPreset(cvs,p){const c=cvs.getContext('2d'),W=cvs.width,H=cvs.height;c.fillStyle='#14532d';c.fillRect(0,0,W,H);
+ const tw=Math.max(roadW(p),40),s=Math.min((W-10)/tw,1.15);let x=(W-tw*s)/2;const y0=5,hh=H-10;
+ const sides=()=>{const a=[];if(p.sw)a.push([p.sw,p.swc||'#b8b8b0']);if(p.park)a.push([16,'#4b5563']);if(p.bike)a.push([12,'#16a34a']);if(p.bus)a.push([p.lw,'#b91c1c']);return a};
+ const band=(w,col)=>{c.fillStyle=col;c.fillRect(x,y0,w*s,hh);x+=w*s};
+ sides().forEach(([w,col])=>band(w,col));const cx0=x,cw=carW(p)*s,mid=cx0+cw/2;band(carW(p),p.col);
+ const Wl=laneW(p)||carW(p);
+ if(p.med){const mc=-Wl/2+p.b*p.lw+p.med/2;c.fillStyle=p.green?'#3f7f3f':p.tram?'#555':'#6b7280';c.fillRect(mid+(mc-p.med/2)*s,y0,p.med*s,hh)}
+ if(p.paved&&p.f+p.b>0){const L0=-Wl/2+p.b*p.lw;c.lineWidth=1.2;c.strokeStyle='#e5e7eb';c.setLineDash([4,4]);
+  for(let i=1;i<p.f;i++){const xx=mid+(L0+p.med+i*p.lw)*s;c.beginPath();c.moveTo(xx,y0);c.lineTo(xx,y0+hh);c.stroke()}
+  for(let i=1;i<p.b;i++){const xx=mid+(L0-i*p.lw)*s;c.beginPath();c.moveTo(xx,y0);c.lineTo(xx,y0+hh);c.stroke()}c.setLineDash([]);
+  if(p.b&&p.f&&!p.med){c.strokeStyle='#facc15';const xx=mid+L0*s;c.beginPath();c.moveTo(xx,y0);c.lineTo(xx,y0+hh);c.stroke()}}
+ c.fillStyle='rgba(255,255,255,.85)';const arr=(xx,up)=>{c.beginPath();const d=up?-1:1;c.moveTo(xx,y0+hh/2+d*9);c.lineTo(xx-4,y0+hh/2-d*3);c.lineTo(xx+4,y0+hh/2-d*3);c.fill()};
+ for(let i=0;i<p.f;i++)arr(mid+laneOff(p,0,i)*s,true);for(let i=0;i<p.b;i++)arr(mid+laneOff(p,1,i)*s,false);
+ x=cx0+cw;sides().reverse().forEach(([w,col])=>band(w,col))}
+function previewMark(cvs,key){const t=MK[key],c=cvs.getContext('2d');c.fillStyle='#3b3f46';c.fillRect(0,0,cvs.width,cvs.height);
+ const m={k:key,...t.def,gap:t.def.gap??10,w:t.def.w??6,len:t.def.len??30,hang:t.def.hang??45,text:t.def.text||'',lv:0};
+ if(t.kind==='line'){const z=1;m.pts=[{x:-38,y:0},{x:38,y:0}];if(key==='l_stripe')m.w=12;swapDraw(cvs,z,()=>drawMark(m))}
+ else{const ext=Math.max(m.len,m.w||0,24);const z=Math.min(1.5,(Math.min(cvs.width,cvs.height)-8)/ext);m.x=0;m.y=0;m.a=-Math.PI/2;swapDraw(cvs,z,()=>drawMark(m))}}
+// ---------- панель підтипів
+function openSub(cat){S.cat=cat;renderSub();$('sub').classList.remove('hidden');syncUI()}
+function closeSub(){$('sub').classList.add('hidden');syncUI()}
+function card(name,on,draw,click){const d=document.createElement('div');d.className='card'+(on?' on':'');const c=document.createElement('canvas');c.width=112;c.height=56;d.appendChild(c);const s=document.createElement('span');s.textContent=name;d.appendChild(s);d.onclick=click;draw(c);return d}
+function renderSub(){const body=$('subbody');body.innerHTML='';
+ if(S.cat===MARK_CAT){$('subtitle').textContent='🖍️ Розмітка — лінії, стрілки, переходи, символи (параметри ліворуч)';
+  const groups=[...new Set(Object.values(MK).map(t=>t.group))];
+  for(const g of groups){const h=document.createElement('div');h.className='gt';h.textContent=g;body.appendChild(h);const gr=document.createElement('div');gr.className='grid';
+   for(const t of Object.values(MK).filter(t=>t.group===g))gr.appendChild(card(t.n,S.tool!=='road'&&S.mk.key===t.key,c=>previewMark(c,t.key),()=>{selectMark(t.key);closeSub()}));body.appendChild(gr)}}
+ else{$('subtitle').textContent=S.cat.replace(/^\S+\s/,'')+' — оберіть тип дороги';const gr=document.createElement('div');gr.className='grid';
+  for(const k in PRESETS){const p=PRESETS[k];if(p.cat!==S.cat)continue;gr.appendChild(card(p.n,S.tool==='road'&&S.preset===k,c=>previewPreset(c,p),()=>{selectPreset(k);closeSub()}))}body.appendChild(gr)}}
+function buildCats(){const nav=$('cats');nav.innerHTML='';const all=[...CATS,MARK_CAT];
+ for(const c of all){const b=document.createElement('button');const em=c===MARK_CAT?'🖍️':c.split(' ')[0],nm=c===MARK_CAT?'Розмітка':c.replace(/^\S+\s/,'');b.innerHTML=`<span class="ic">${em}</span><span>${nm}</span>`;b.dataset.cat=c;
+  b.onclick=()=>{if(c===MARK_CAT){if(S.tool==='road'){S.tool='mark';S.pts=[];renderMkPar()}}else if(S.tool!=='road'){S.tool='road';S.mkpts=[]}
+  if(S.cat===c&&!$('sub').classList.contains('hidden'))closeSub();else openSub(c)};nav.appendChild(b)}}
+// ---------- вибір інструментів
+function selectPreset(k){S.preset=k;S.tool='road';S.pts=[];S.mkpts=[];const p=PRESETS[k];if(p.lv!==undefined)S.opt.level=p.lv;syncUI()}
+function selectMark(key){const t=MK[key];S.mk.key=key;for(const f of['len','w','gap','col','hang','text'])if(t.def[f]!==undefined)S.mk[f]=t.def[f];S.tool='mark';S.pts=[];S.mkpts=[];renderMkPar();syncUI()}
+function renderMkPar(){const t=MK[S.mk.key],box=$('mk-par');$('mk-name').textContent='🖍️ '+t.n;box.innerHTML='';
+ for(const f of t.par){const row=document.createElement('div');row.className='row';const lb=document.createElement('label');lb.textContent=MPAR[f];row.appendChild(lb);let inp;
+  if(f==='col'){inp=document.createElement('select');for(const k in MCOLN){const o=document.createElement('option');o.value=k;o.textContent=MCOLN[k];inp.appendChild(o)}inp.value=S.mk.col;inp.onchange=()=>{S.mk.col=inp.value;S.dirty=1}}
+  else if(f==='text'){inp=document.createElement('input');inp.type='text';inp.value=S.mk.text;inp.maxLength=12;inp.oninput=()=>{S.mk.text=inp.value;S.dirty=1}}
+  else{inp=document.createElement('input');inp.type='number';inp.step=f==='ang'||f==='hang'?5:1;inp.value=S.mk[f];inp.dataset.f=f;inp.oninput=()=>{const v=parseFloat(inp.value);if(Number.isFinite(v)){S.mk[f]=v;S.dirty=1}}}
+  row.appendChild(inp);box.appendChild(row)}}
+function syncUI(){document.querySelectorAll('#cats button').forEach(b=>b.classList.toggle('on',b.dataset.cat===S.cat&&!$('sub').classList.contains('hidden')||(b.dataset.cat===MARK_CAT&&S.tool!=='road'&&$('sub').classList.contains('hidden'))));
+ document.querySelectorAll('#s-mode button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.opt.mode));
+ document.querySelectorAll('#s-level button').forEach(b=>b.classList.toggle('on',+b.dataset.v===S.opt.level));
+ for(const[id,k]of[['t-par','par'],['t-mrg','mrg'],['t-grid','grid'],['t-snap','snap']])$(id).classList.toggle('on',!!S.opt[k]);
+ $('g-road').classList.toggle('hidden',S.tool!=='road');$('g-mark').classList.toggle('hidden',S.tool==='road');$('mk-erase').classList.toggle('on',S.tool==='erase');S.dirty=1}
+for(const[id,k,num]of[['s-mode','mode'],['s-level','level',1]])$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{S.opt[k]=num?+b.dataset.v:b.dataset.v;syncUI()});
+for(const[id,k]of[['t-par','par'],['t-mrg','mrg'],['t-grid','grid'],['t-snap','snap']])$(id).onclick=()=>{S.opt[k]=!S.opt[k];syncUI()};
+$('mk-erase').onclick=()=>{S.tool=S.tool==='erase'?'mark':'erase';S.mkpts=[];syncUI()};
+// ---------- побудова доріг і розмітки
+function finish(){if(S.pts.length>1){const rev=S.rev;pushUndo();const sp=S.opt.mode==='spline',lv=S.opt.level,pr=PRESETS[S.preset];
+  addRoad(S.pts.slice(),S.preset,lv,sp);if(S.opt.par)addRoad(offsetLine(S.pts,roadW(pr)+24),S.preset,lv,sp,true);if(S.rev===rev)UNDO.pop()}S.pts=[]}
+function finishMark(){const t=MK[S.mk.key];if(t.kind==='line'&&S.mkpts.length>1){pushUndo();const m=markAt(S.mkpts[0]);m.pts=S.mkpts.map(p=>({x:p.x,y:p.y}));S.marks.push(m);S.rev++;S.dirty=1}S.mkpts=[]}
+/** Побудова з автоматичним відкатом при помилці (щоб жодна дія не залишала мережу напівзламаною). */
+function safeFinish(){try{S.tool==='road'?finish():finishMark()}catch(err){console.error(err);S.pts=[];S.mkpts=[];undo();toast('Не вдалося виконати дію — зміни скасовано')}}
+const gridPt=p=>({x:Math.round(p.x/40)*40,y:Math.round(p.y/40)*40});
+const markPt=p=>{if(S.opt.snap){const b=snapBoundary(p);if(b)return{x:b.x,y:b.y}}return S.opt.grid?gridPt(p):{x:p.x,y:p.y}};
+let drag=null;
+cv.addEventListener('mousedown',e=>{S.dirty=1;if(e.button===2){drag={x:e.clientX,y:e.clientY,cx:S.cam.x,cy:S.cam.y};return}if(e.button!==0)return;closeSub();
+ const p=s2w(e.clientX,e.clientY);
+ if(S.tool==='erase'){pushUndo();if(!eraseMarkAt(p))UNDO.pop();return}
+ if(S.tool==='mark'){const t=MK[S.mk.key];if(t.kind==='stamp'){pushUndo();S.marks.push(markAt(p));S.rev++}else S.mkpts.push(markPt(p));return}
+ if(e.altKey){let best=null,bd=40;for(const l of S.lanes)for(let s=0;s<l.len;s+=10){const q=at(l,s),d=Math.hypot(q.x-p.x,q.y-p.y);if(d<bd){bd=d;best={lane:l,s}}}
+  if(best){const q=at(best.lane,best.s);best.x=q.x;best.y=q.y;best.lvl=lvOf(best.lane);S.obst.push(best)}return}
+ S.pts.push(S.opt.grid?gridPt(p):{x:p.x,y:p.y})});
+cv.addEventListener('mousemove',e=>{S.dirty=1;if(drag){S.cam.x=drag.cx-(e.clientX-drag.x)/S.cam.z;S.cam.y=drag.cy-(e.clientY-drag.y)/S.cam.z}
+ const p=s2w(e.clientX,e.clientY);S.mouseRaw=p;S.mouse=S.opt.grid?gridPt(p):{x:p.x,y:p.y};S.mkMouse=markPt(p)});
+addEventListener('mouseup',()=>drag=null);cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('dblclick',()=>{if(S.tool==='road')S.pts.pop();else if(S.tool==='mark')S.mkpts.pop();safeFinish()});
+cv.addEventListener('wheel',e=>{S.dirty=1;S.cam.z=Math.max(.3,Math.min(3,S.cam.z*(e.deltaY<0?1.1:.9)))});
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test((e.target.tagName||'')))return;S.dirty=1;
+ if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'){e.preventDefault();undo();return}
+ if(e.key==='Enter')safeFinish();if(e.key==='Escape'){S.pts=[];S.mkpts=[];closeSub()}
+ if(S.tool==='mark'&&(e.key==='['||e.key===']')){S.mk.ang=(((S.mk.ang||0)+(e.key===']'?15:-15))%360+360)%360;const i=document.querySelector('#mk-par input[data-f=ang]');if(i)i.value=S.mk.ang}});
+// ---------- кнопки дій
+$('sim').onclick=()=>{S.run=!S.run;$('sim').textContent=S.run?'⏸ Трафік':'▶ Трафік'};
+$('undo').onclick=undo;
+$('clr').onclick=()=>{pushUndo();S.roads=[];S.marks=[];S.pts=[];S.mkpts=[];S.obst=[];S.cars=[];buildGraph();toast('Все очищено · Ctrl+Z поверне назад')};
+$('save').onclick=saveFile;$('load').onclick=()=>$('file').click();$('file').onchange=e=>{const f=e.target.files[0];if(f)loadFile(f);e.target.value=''};
+// ---------- старт
+buildCats();selectPreset('p0');renderMkPar();restoreAuto();if(S.roads.length||S.marks.length)toast('Відновлено автозбереження');else openSub(CATS[0]);syncUI();
  
 /* ===== js/main.js ===== */
 'use strict';
 /* ГОЛОВНИЙ ЦИКЛ: фіксований крок симуляції (60 Гц, акумулятор) — однакова поведінка на будь-якому FPS.
-   Малювання лише коли щось змінилось (симуляція йде або S.dirty); помилка не зупиняє цикл, а показується у підказці. */
-let last=performance.now(),acc=0;
+   Малювання лише коли щось змінилось (симуляція йде або S.dirty); помилка не зупиняє цикл, а показується у підказці.
+   Автозбереження — раз на 2 с, якщо мережа чи розмітка змінились. */
+let last=performance.now(),acc=0,savedRev=-1;
 function frame(t){const dt=Math.min(.1,(t-last)/1000);last=t;
  try{if(S.run){acc+=dt;let n=0;while(acc>=SIM.dt&&n<3){step(SIM.dt);acc-=SIM.dt;n++}if(n===3)acc=0}
-  if(!$('c3d').classList.contains('hidden'))draw3D();else if(S.run||S.dirty){draw();S.dirty=0}}
+  if(S.run||S.dirty){draw();S.dirty=0}}
  catch(e){console.error(e);S.run=false;const d=$('hint');d.style.background='#7f1d1d';d.textContent='Помилка: '+e.message}
  requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
- 
+setInterval(()=>{if(S.rev!==savedRev){savedRev=S.rev;autosave()}},2000);
