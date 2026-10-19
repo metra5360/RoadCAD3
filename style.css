@@ -1,14 +1,38 @@
-html,body{margin:0;user-select:none}
-canvas#c2d,#c3d{position:absolute;inset:0;width:100%;height:100%}
-.btn{background:#4f46e5;padding:.25rem .75rem;border-radius:.375rem;font-size:.875rem}
-.btn:hover{background:#6366f1}
-.pre{background:#374151;padding:.35rem .6rem;border-radius:.375rem;font-size:.8rem;border:2px solid transparent}
-.pre.on{border-color:#818cf8;background:#4338ca}
-/* Запасні стилі: сторінка працює навіть якщо Tailwind із CDN не завантажився */
+:root{--bg:#0f1520;--panel:rgba(24,30,42,.94);--panel2:#273043;--acc:#4f7cff;--acc2:#2b4fb3;--tx:#e8edf7;--mut:#8b97ad}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font:13px/1.35 system-ui,Segoe UI,Roboto,sans-serif;user-select:none}
+canvas#c2d{position:absolute;inset:0;width:100%;height:100%;z-index:0}
 .hidden{display:none!important}
-body{background:#111827;color:#f3f4f6;font-family:system-ui,sans-serif;height:100vh;width:100vw;overflow:hidden}
-canvas#c2d{z-index:0}#c3d{z-index:1}
-#bar{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:center;padding:.5rem;background:rgba(31,41,55,.95);border-top:1px solid #374151;z-index:5}
-#hint{position:absolute;top:.5rem;left:.5rem;z-index:5;font-size:.75rem;background:rgba(31,41,55,.8);border-radius:.25rem;padding:.25rem .5rem}
-#bar select{background:#374151;color:#f3f4f6;border-radius:.375rem;padding:.25rem .5rem;font-size:.875rem}
- 
+button{font:inherit;color:var(--tx);background:var(--panel2);border:1px solid #38445c;border-radius:8px;padding:6px 10px;cursor:pointer}
+button:hover{background:#334057}
+button.on,.seg button.on,.card.on{background:var(--acc2);border-color:var(--acc)}
+/* верхня панель типів */
+#top{position:absolute;top:0;left:0;right:0;height:54px;z-index:5;display:flex;align-items:center;gap:14px;padding:0 12px;background:var(--panel);border-bottom:1px solid #2b3447}
+#brand{font-weight:700;letter-spacing:.3px;white-space:nowrap}
+#cats{flex:1;display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;overflow-x:auto}
+#cats button{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:92px;padding:5px 10px;font-size:12px}
+#cats button .ic{font-size:20px;line-height:1}
+#acts{display:flex;gap:6px}
+#acts button{min-width:36px}
+/* панель підтипів (динамічна) */
+#sub{position:absolute;top:62px;left:250px;z-index:6;width:min(980px,calc(100vw - 270px));max-height:calc(100vh - 150px);overflow:auto;background:var(--panel);border:1px solid #34405a;border-radius:12px;padding:10px 12px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+#subtitle{font-weight:600;margin:0 0 8px;color:var(--mut)}
+.gt{margin:10px 0 6px;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;background:var(--panel2);border:1px solid #38445c;border-radius:10px;cursor:pointer;text-align:center;font-size:11.5px}
+.card:hover{background:#334057}
+.card canvas{width:100%;height:56px;border-radius:6px;display:block}
+/* ліва панель інструментів */
+#tools{position:absolute;left:12px;top:70px;z-index:4;width:224px;display:flex;flex-direction:column;gap:8px}
+.grp{background:var(--panel);border:1px solid #2b3447;border-radius:12px;padding:8px 10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0}
+.row label{color:var(--mut)}
+.seg{display:flex}.seg button{border-radius:0;padding:5px 12px}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0}
+.sw{width:42px;height:22px;border-radius:12px;padding:0;position:relative}
+.sw::after{content:"";position:absolute;top:2px;left:3px;width:16px;height:16px;border-radius:50%;background:#aab3c5;transition:.15s}
+.sw.on::after{left:22px;background:#fff}
+.wide{width:100%}
+#mk-name{font-weight:600;margin-bottom:6px}
+#mk-par input,#mk-par select{width:92px;background:#1a2231;color:var(--tx);border:1px solid #38445c;border-radius:6px;padding:4px 6px}
+#mk-par input[type=range]{width:92px;padding:0}
+#hint{position:absolute;left:12px;bottom:10px;max-width:calc(100vw - 24px);z-index:5;font-size:12px;color:var(--mut);background:rgba(15,21,32,.8);border-radius:8px;padding:5px 9px}
